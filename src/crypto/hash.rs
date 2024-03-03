@@ -12,7 +12,6 @@ pub(crate) enum Hasher {
 	Sha1(<Sha1 as Hash>::Engine),
 	Sha256(<Sha256 as Hash>::Engine),
 	Sha384(<Sha384 as Hash>::Engine),
-	#[allow(unused)]
 	Sha512(<Sha512 as Hash>::Engine),
 }
 
@@ -38,7 +37,6 @@ impl Hasher {
 	pub(crate) fn sha1() -> Hasher { Hasher::Sha1(Sha1::engine()) }
 	pub(crate) fn sha256() -> Hasher { Hasher::Sha256(Sha256::engine()) }
 	pub(crate) fn sha384() -> Hasher { Hasher::Sha384(Sha384::engine()) }
-	#[allow(unused)]
 	pub(crate) fn sha512() -> Hasher { Hasher::Sha512(Sha512::engine()) }
 
 	pub(crate) fn update(&mut self, buf: &[u8]) {
