@@ -202,7 +202,7 @@ where RI: IntoIterator<IntoIter = R>, R: Iterator<Item = &'r RRSig>,
 				let mut ctx = match ds.digest_type {
 					1 if trust_sha1 => crypto::hash::Hasher::sha1(),
 					2 => crypto::hash::Hasher::sha256(),
-					// TODO: 4 => crypto::hash::Hasher::sha384(),
+					4 => crypto::hash::Hasher::sha384(),
 					_ => continue,
 				};
 				write_name(&mut ctx, &dnskey.name);

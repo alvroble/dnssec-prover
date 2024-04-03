@@ -5,11 +5,13 @@ use bitcoin_hashes::Hash;
 use bitcoin_hashes::HashEngine as _;
 use bitcoin_hashes::sha1::Hash as Sha1;
 use bitcoin_hashes::sha256::Hash as Sha256;
+use bitcoin_hashes::sha384::Hash as Sha384;
 use bitcoin_hashes::sha512::Hash as Sha512;
 
 pub(crate) enum Hasher {
 	Sha1(<Sha1 as Hash>::Engine),
 	Sha256(<Sha256 as Hash>::Engine),
+	Sha384(<Sha384 as Hash>::Engine),
 	#[allow(unused)]
 	Sha512(<Sha512 as Hash>::Engine),
 }
@@ -17,6 +19,7 @@ pub(crate) enum Hasher {
 pub(crate) enum HashResult {
 	Sha1(Sha1),
 	Sha256(Sha256),
+	Sha384(Sha384),
 	Sha512(Sha512),
 }
 
@@ -25,6 +28,7 @@ impl AsRef<[u8]> for HashResult {
 		match self {
 			HashResult::Sha1(hash) => hash.as_ref(),
 			HashResult::Sha256(hash) => hash.as_ref(),
+			HashResult::Sha384(hash) => hash.as_ref(),
 			HashResult::Sha512(hash) => hash.as_ref(),
 		}
 	}
@@ -33,6 +37,7 @@ impl AsRef<[u8]> for HashResult {
 impl Hasher {
 	pub(crate) fn sha1() -> Hasher { Hasher::Sha1(Sha1::engine()) }
 	pub(crate) fn sha256() -> Hasher { Hasher::Sha256(Sha256::engine()) }
+	pub(crate) fn sha384() -> Hasher { Hasher::Sha384(Sha384::engine()) }
 	#[allow(unused)]
 	pub(crate) fn sha512() -> Hasher { Hasher::Sha512(Sha512::engine()) }
 
@@ -40,6 +45,7 @@ impl Hasher {
 		match self {
 			Hasher::Sha1(hasher) => hasher.input(buf),
 			Hasher::Sha256(hasher) => hasher.input(buf),
+			Hasher::Sha384(hasher) => hasher.input(buf),
 			Hasher::Sha512(hasher) => hasher.input(buf),
 		}
 	}
@@ -48,6 +54,7 @@ impl Hasher {
 		match self {
 			Hasher::Sha1(hasher) => HashResult::Sha1(Sha1::from_engine(hasher)),
 			Hasher::Sha256(hasher) => HashResult::Sha256(Sha256::from_engine(hasher)),
+			Hasher::Sha384(hasher) => HashResult::Sha384(Sha384::from_engine(hasher)),
 			Hasher::Sha512(hasher) => HashResult::Sha512(Sha512::from_engine(hasher)),
 		}
 	}
