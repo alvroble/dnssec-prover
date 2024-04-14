@@ -207,6 +207,7 @@ const MAX_REQUESTS: usize = 10;
 /// make a query to `https://doh-server/endpoint?dns=base64url_encoded_query` with an `Accept`
 /// header of `application/dns-message`. Each response, in raw binary, can be fed directly into
 /// [`ProofBuilder::process_response`].
+#[derive(Clone)]
 pub struct ProofBuilder {
 	proof: Vec<u8>,
 	min_ttl: u32,
