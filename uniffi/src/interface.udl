@@ -1,0 +1,10 @@
+namespace dnssec_prover {
+	string verify_byte_stream(bytes stream, string name_to_resolve);
+	ProofBuilder? init_proof_builder(string name, u16 ty);
+};
+
+interface ProofBuilder {
+	void process_query_response(bytes response);
+	bytes? get_next_query();
+	bytes? get_unverified_proof();
+};
