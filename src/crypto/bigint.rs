@@ -117,21 +117,24 @@ const fn slice_equal(a: &[u64], b: &[u64]) -> bool {
 	true
 }
 
-/// Adds one in-place, returning an overflow flag, in which case one out-of-bounds high bit is
-/// implicitly included in the result.
+/// Adds a single u64 valuein-place, returning an overflow flag, in which case one out-of-bounds
+/// high bit is implicitly included in the result.
 ///
 /// Once `const_mut_refs` is stable we can convert this to a function
-macro_rules! add_one { ($a: ident) => { {
+macro_rules! add_u64 { ($a: ident, $b: expr) => { {
 	let len = $a.len();
-	let mut i = 0;
-	let mut res = true;
-	while i < len {
-		let (v, carry) = $a[len - 1 - i].overflowing_add(1);
-		$a[len - 1 - i] = v;
-		if !carry { res = false; break; }
-		i += 1;
+	let mut i = len - 1;
+	let mut add = $b;
+	loop {
+		let (v, carry) = $a[i].overflowing_add(add);
+		$a[i] = v;
+		add = carry as u64;
+		if add == 0 { break; }
+
+		if i == 0 { break; }
+		i -= 1;
 	}
-	res
+	add != 0
 } } }
 
 /// Negates the given u64 slice.
@@ -143,7 +146,7 @@ macro_rules! negate { ($v: ident) => { {
 		$v[i] ^= 0xffff_ffff_ffff_ffff;
 		i += 1;
 	}
-	let overflow = add_one!($v);
+	let overflow = add_u64!($v, 1);
 	debug_assert!(!overflow);
 } } }
 
@@ -404,7 +407,7 @@ macro_rules! define_mul { ($name: ident, $len: expr, $submul: ident, $add: ident
 		let (k, j_carry) = $subadd(const_subslice(&z0, 0, $len / 2), const_subslice(&z1, $len / 2, $len));
 		let (mut j, mut i_carry) = $subadd(const_subslice(&z1, 0, $len / 2), const_subslice(&z2, $len / 2, $len));
 		if j_carry {
-			let new_i_carry = add_one!(j);
+			let new_i_carry = add_u64!(j, 1);
 			debug_assert!(!i_carry || !new_i_carry);
 			i_carry |= new_i_carry;
 		}
@@ -412,11 +415,11 @@ macro_rules! define_mul { ($name: ident, $len: expr, $submul: ident, $add: ident
 		let i_source = const_subslice(&z2, 0, $len / 2);
 		copy_from_slice!(i, 0, $len / 2, i_source);
 		if i_carry {
-			let spurious_carry = add_one!(i);
+			let spurious_carry = add_u64!(i, 1);
 			debug_assert!(!spurious_carry);
 		}
 		if z1_carry {
-			let spurious_carry = add_one!(i);
+			let spurious_carry = add_u64!(i, 1);
 			debug_assert!(!spurious_carry);
 		}
 
@@ -499,16 +502,16 @@ macro_rules! define_sqr { ($name: ident, $len: expr, $submul: ident, $subsqr: id
 		copy_from_slice!(i, 0, $len / 2, i_source);
 
 		if j_carry {
-			let new_i_carry = add_one!(j);
+			let new_i_carry = add_u64!(j, 1);
 			debug_assert!(!i_carry_2 || !new_i_carry);
 			i_carry_2 |= new_i_carry;
 		}
 		if i_carry {
-			let spurious_carry = add_one!(i);
+			let spurious_carry = add_u64!(i, 1);
 			debug_assert!(!spurious_carry);
 		}
 		if i_carry_2 {
-			let spurious_carry = add_one!(i);
+			let spurious_carry = add_u64!(i, 1);
 			debug_assert!(!spurious_carry);
 		}
 
@@ -567,7 +570,7 @@ macro_rules! define_div_rem { ($name: ident, $len: expr, $sub: ident, $heap_init
 			pow2 -= 1;
 		}
 		if slice_equal(&rem, b) {
-			let overflow = add_one!(quot);
+			let overflow = add_u64!(quot, 1);
 			debug_assert!(!overflow);
 			Ok((quot, [0; $len]))
 		} else {
@@ -860,7 +863,7 @@ impl U4096 {
 		// If we ever find a problem with this we should reduce R to be tigher on m, as we're
 		// wasting extra bits of calculation if R is too far from m.
 		let (_, mut r_mod_m) = debug_unwrap!(div_rem_64(&r_minus_one, &m.0));
-		let r_mod_m_overflow = add_one!(r_mod_m);
+		let r_mod_m_overflow = add_u64!(r_mod_m, 1);
 		if r_mod_m_overflow || r_mod_m >= m.0 {
 			(r_mod_m, _) = sub_64(&r_mod_m, &m.0);
 		}
@@ -1070,7 +1073,7 @@ impl<M: PrimeModulus<U256>> U256Mod<M> {
 			// should be able to do it at compile time alone.
 			let r_minus_one = [0xffff_ffff_ffff_ffff; 4];
 			let (mut r_mod_prime, _) = sub_4(&r_minus_one, &M::PRIME.0);
-			add_one!(r_mod_prime);
+			add_u64!(r_mod_prime, 1);
 			let r_squared = sqr_4(&r_mod_prime);
 			let mut prime_extended = [0; 8];
 			let prime = M::PRIME.0;
@@ -1249,7 +1252,7 @@ impl<M: PrimeModulus<U384>> U384Mod<M> {
 			// should be able to do it at compile time alone.
 			let r_minus_one = [0xffff_ffff_ffff_ffff; 6];
 			let (mut r_mod_prime, _) = sub_6(&r_minus_one, &M::PRIME.0);
-			add_one!(r_mod_prime);
+			add_u64!(r_mod_prime, 1);
 			let r_squared = sqr_6(&r_mod_prime);
 			let mut prime_extended = [0; 12];
 			let prime = M::PRIME.0;
@@ -1453,7 +1456,7 @@ pub fn fuzz_math(input: &[u8]) {
 		assert_eq!(ibig::UBig::from_be_bytes(&res_bytes), ai.clone() + bi.clone());
 
 		let mut add_u64s = a_u64s.clone();
-		let carry = add_one!(add_u64s);
+		let carry = add_u64!(add_u64s, 1);
 		let mut res_bytes = Vec::with_capacity(input.len() / 2 + 1);
 		if carry { res_bytes.push(1); } else { res_bytes.push(0); }
 		for i in &add_u64s {
