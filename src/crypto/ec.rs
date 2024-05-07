@@ -78,6 +78,7 @@ pub(super) trait Curve : Copy {
 }
 
 #[derive(Clone, PartialEq, Eq)]
+/// A Point, stored in Jacobian coordinates
 pub(super) struct Point<C: Curve + ?Sized> {
 	x: C::CurveField,
 	y: C::CurveField,
@@ -104,6 +105,10 @@ impl<C: Curve + ?Sized> Point<C> {
 
 	#[cfg(debug_assertions)]
 	fn on_curve_z(x: &C::CurveField, y: &C::CurveField, z: &C::CurveField) -> Result<(), ()> {
+		// m = 1 / z
+		// x_norm = x * m^2
+		// y_norm = y * m^3
+
 		let m = C::CurveField::from_modinv_of(z.clone().into_i())?;
 		let m_2 = m.square();
 		let m_3 = m_2.mul(&m);
@@ -171,22 +176,44 @@ impl<C: Curve + ?Sized> Point<C> {
 		if self.y == C::CurveField::ZERO { return Err(()); }
 		if self.z == C::CurveField::ZERO { return Err(()); }
 
-		let s = self.x.times_four().mul(&self.y.square());
-		let z_2 = self.z.square();
-		let z_4 = z_2.square();
-		let y_2 = self.y.square();
-		let y_4 = y_2.square();
-		let x_2 = self.x.square();
-		let m = x_2.times_three().add(&C::A.mul(&z_4));
-		let x = m.square().sub(&s.double());
-		let y = m.mul(&s.sub(&x)).sub(&y_4.times_eight());
-		let z = self.y.double().mul(&self.z);
+		// https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2001-b
+		// delta = Z1^2
+		// gamma = Y1^2
+		// beta = X1*gamma
+		// alpha = 3*(X1-delta)*(X1+delta)
+		// X3 = alpha^2-8*beta
+		// Z3 = (Y1+Z1)^2-gamma-delta
+		// Y3 = alpha*(4*beta-X3)-8*gamma^2
+
+		let delta = self.z.square();
+		let gamma = self.y.square();
+		let beta = self.x.mul(&gamma);
+		let alpha = self.x.sub(&delta).times_three().mul(&self.x.add(&delta));
+		let x = alpha.square().sub(&beta.times_eight());
+		let y = alpha.mul(&beta.times_four().sub(&x)).sub(&gamma.square().times_eight());
+		let z = self.y.add(&self.z).square().sub(&gamma).sub(&delta);
 
 		#[cfg(debug_assertions)] { assert!(Self::on_curve_z(&x, &y, &z).is_ok()); }
 		Ok(Point { x, y, z })
 	}
 
 	fn add(&self, o: &Self) -> Result<Self, ()> {
+		// https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-2007-bl
+		// Z1Z1 = Z1^2
+		// Z2Z2 = Z2^2
+		// U1 = X1*Z2Z2
+		// U2 = X2*Z1Z1
+		// S1 = Y1*Z2*Z2Z2
+		// S2 = Y2*Z1*Z1Z1
+		// H = U2-U1
+		// I = (2*H)^2
+		// J = H*I
+		// r = 2*(S2-S1)
+		// V = U1*I
+		// X3 = r^2-J-2*V
+		// Y3 = r*(V-X3)-2*S1*J
+		// Z3 = ((Z1+Z2)^2-Z1Z1-Z2Z2)*H
+
 		let o_z_2 = o.z.square();
 		let self_z_2 = self.z.square();
 
@@ -199,12 +226,13 @@ impl<C: Curve + ?Sized> Point<C> {
 			return self.double();
 		}
 		let h = u2.sub(&u1);
-		let h_2 = h.square();
-		let h_3 = h.mul(&h_2);
-		let r = s2.sub(&s1);
-		let x = r.square().sub(&h_3).sub(&u1.double().mul(&h_2));
-		let y = r.mul(&u1.mul(&h_2).sub(&x)).sub(&s1.mul(&h_3));
-		let z = h.mul(&self.z).mul(&o.z);
+		let i = h.double().square();
+		let j = h.mul(&i);
+		let r = s2.sub(&s1).double();
+		let v = u1.mul(&i);
+		let x = r.square().sub(&j).sub(&v.double());
+		let y = r.mul(&v.sub(&x)).sub(&s1.double().mul(&j));
+		let z = self.z.add(&o.z).square().sub(&self_z_2).sub(&o_z_2).mul(&h);
 
 		#[cfg(debug_assertions)] { assert!(Self::on_curve_z(&x, &y, &z).is_ok()); }
 		Ok(Point { x, y, z})
