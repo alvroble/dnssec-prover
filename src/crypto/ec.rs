@@ -85,6 +85,10 @@ pub(super) struct Point<C: Curve + ?Sized> {
 }
 
 impl<C: Curve + ?Sized> Point<C> {
+	fn check_curve_conditions() {
+		debug_assert!(C::ScalarModulus::PRIME < C::CurveModulus::PRIME, "N is < P");
+	}
+
 	fn on_curve(x: &C::CurveField, y: &C::CurveField) -> Result<(), ()> {
 		let x_2 = x.square();
 		let x_3 = x_2.mul(&x);
@@ -115,6 +119,8 @@ impl<C: Curve + ?Sized> Point<C> {
 	}
 
 	fn from_xy(x: C::Int, y: C::Int) -> Result<Self, ()> {
+		Self::check_curve_conditions();
+
 		let x = C::CurveField::from_i(x);
 		let y = C::CurveField::from_i(y);
 		Self::on_curve(&x, &y)?;
@@ -127,12 +133,28 @@ impl<C: Curve + ?Sized> Point<C> {
 
 	/// Checks that `expected_x` is equal to our X affine coordinate (without modular inversion).
 	fn eq_x(&self, expected_x: &C::ScalarField) -> Result<(), ()> {
-		debug_assert!(expected_x.clone().into_i() < C::CurveModulus::PRIME, "N is < P");
-
 		// If x is between N and P the below calculations will fail and we'll spuriously reject a
 		// signature and the wycheproof tests will fail. We should in theory accept such
 		// signatures, but the probability of this happening at random is roughly 1/2^128, i.e. we
 		// really don't need to handle it in practice. Thus, we only bother to do this in tests.
+		debug_assert!(expected_x.clone().into_i() < C::CurveModulus::PRIME, "N is < P");
+		debug_assert!(C::ScalarModulus::PRIME < C::CurveModulus::PRIME, "N is < P");
+		#[cfg(debug_assertions)] {
+			// Check the above assertion - ensure the difference between the modulus of the scalar
+			// and curve fields is less than half the bit length of our integers, which are at
+			// least 256 bit long.
+			let scalar_mod_on_curve = C::CurveField::from_i(C::ScalarModulus::PRIME);
+			let diff = C::CurveField::ZERO.sub(&scalar_mod_on_curve);
+			assert!(C::Int::BYTES * 8 / 2 >= 128, "We assume 256-bit ints and longer");
+			assert!(C::CurveModulus::PRIME.limbs()[0] > (1 << 63), "PRIME should have the top bit set");
+			assert!(C::ScalarModulus::PRIME.limbs()[0] > (1 << 63), "PRIME should have the top bit set");
+			let mut half_bitlen = C::CurveField::ONE;
+			for _ in 0..C::Int::BYTES * 8 / 2 {
+				half_bitlen = half_bitlen.double();
+			}
+			assert!(diff.into_i() < half_bitlen.into_i());
+		}
+
 		#[allow(unused_mut, unused_assignments)]
 		let mut slow_check = None;
 		#[cfg(test)] {
