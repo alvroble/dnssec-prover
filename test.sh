@@ -1,6 +1,12 @@
 #!/bin/sh
 set -eox
-export RUSTC_BOOTSTRAP=1
+
+RUSTC_MINOR_VERSION=$(rustc --version | awk '{ split($2,a,"."); print a[2] }')
+if [ "$RUSTC_MINOR_VERSION" = 63 ]; then
+	export RUSTC_BOOTSTRAP=1
+	export RUSTFLAGS=--cfg=rust_1_63
+fi
+
 cargo test --no-default-features
 cargo test
 cargo test --no-default-features --features std

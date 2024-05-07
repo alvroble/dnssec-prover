@@ -4,8 +4,7 @@
 
 // const_slice_from_raw_parts was stabilized in 1.64, however we support building on 1.63 as well.
 // Luckily, it seems to work fine in 1.63 with the feature flag (and RUSTC_BOOTSTRAP=1) enabled.
-#![cfg_attr(feature = "validation", allow(stable_features))]
-#![cfg_attr(feature = "validation", feature(const_slice_from_raw_parts))]
+#![cfg_attr(all(feature = "validation", rust_1_63), feature(const_slice_from_raw_parts))]
 
 extern crate alloc;
 
