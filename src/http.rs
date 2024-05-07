@@ -45,6 +45,9 @@ async fn main() {
 	imp::run_server(listener, resolver_sockaddr).await;
 }
 
+#[cfg(not(feature = "build_server"))]
+fn main() { panic!("You need to enable the `build_server` feature to use the built-in server"); }
+
 #[cfg(any(feature = "build_server", all(feature = "tokio", feature = "validation")))]
 mod imp {
 	use super::*;
