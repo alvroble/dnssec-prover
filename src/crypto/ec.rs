@@ -173,7 +173,7 @@ impl<C: Curve + ?Sized> Point<C> {
 		let s1 = self.y.mul(&o.z.mul(&o_z_2));
 		let s2 = o.y.mul(&self.z.mul(&self_z_2));
 		if u1 == u2 {
-			if s1 != s2 { /* PAI */ return Err(()); }
+			if s1 != s2 { /* Point at Infinity */ return Err(()); }
 			return self.double();
 		}
 		let h = u2.sub(&u1);
@@ -218,11 +218,11 @@ fn add_two_mul<C: Curve>(i: C::ScalarField, I: &Point<C>, j: C::ScalarField, J: 
 			}
 			if i_bit {
 				if let Ok(res) = res_opt.as_mut() {
-					// The wycheproof tests expect to see signatures pass even if we hit PAI on an
-					// intermediate result. While that's fine, I'm too lazy to go figure out if all
-					// our PAI definitions are right and the probability of this happening at
-					// random is, basically, the probability of guessing a private key anyway, so
-					// its not really worth actually handling outside of tests.
+					// The wycheproof tests expect to see signatures pass even if we hit Point at
+					// Infinity (PAI) on an intermediate result. While that's fine, I'm too lazy to
+					// go figure out if all our PAI definitions are right and the probability of
+					// this happening at random is, basically, the probability of guessing a private
+					// key anyway, so its not really worth actually handling outside of tests.
 					#[cfg(test)] {
 						res_opt = res.add(I);
 					}
@@ -235,11 +235,11 @@ fn add_two_mul<C: Curve>(i: C::ScalarField, I: &Point<C>, j: C::ScalarField, J: 
 			}
 			if j_bit {
 				if let Ok(res) = res_opt.as_mut() {
-					// The wycheproof tests expect to see signatures pass even if we hit PAI on an
-					// intermediate result. While that's fine, I'm too lazy to go figure out if all
-					// our PAI definitions are right and the probability of this happening at
-					// random is, basically, the probability of guessing a private key anyway, so
-					// its not really worth actually handling outside of tests.
+					// The wycheproof tests expect to see signatures pass even if we hit Point at
+					// Infinity (PAI) on an intermediate result. While that's fine, I'm too lazy to
+					// go figure out if all our PAI definitions are right and the probability of
+					// this happening at random is, basically, the probability of guessing a private
+					// key anyway, so its not really worth actually handling outside of tests.
 					#[cfg(test)] {
 						res_opt = res.add(J);
 					}
