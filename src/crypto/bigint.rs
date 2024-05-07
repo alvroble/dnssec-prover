@@ -104,7 +104,7 @@ macro_rules! negate { ($v: ident) => { {
 		$v[i] ^= 0xffff_ffff_ffff_ffff;
 		i += 1;
 	}
-	add_u64!($v, 1);
+	let _ = add_u64!($v, 1);
 } } }
 
 /// Doubles in-place, returning an overflow flag, in which case one out-of-bounds high bit is
@@ -985,7 +985,8 @@ impl<M: PrimeModulus<U256>> U256Mod<M> {
 			// should be able to do it at compile time alone.
 			let r_minus_one = [0xffff_ffff_ffff_ffff; 4];
 			let (mut r_mod_prime, _) = sub_4(&r_minus_one, &M::PRIME.0);
-			add_u64!(r_mod_prime, 1);
+			let r_mod_prime_overflow = add_u64!(r_mod_prime, 1);
+			assert!(!r_mod_prime_overflow);
 			let r_squared = sqr_4(&r_mod_prime);
 			let mut prime_extended = [0; 8];
 			let prime = M::PRIME.0;
@@ -1183,7 +1184,8 @@ impl<M: PrimeModulus<U384>> U384Mod<M> {
 			// should be able to do it at compile time alone.
 			let r_minus_one = [0xffff_ffff_ffff_ffff; 6];
 			let (mut r_mod_prime, _) = sub_6(&r_minus_one, &M::PRIME.0);
-			add_u64!(r_mod_prime, 1);
+			let r_mod_prime_overflow = add_u64!(r_mod_prime, 1);
+			assert!(!r_mod_prime_overflow);
 			let r_squared = sqr_6(&r_mod_prime);
 			let mut prime_extended = [0; 12];
 			let prime = M::PRIME.0;
