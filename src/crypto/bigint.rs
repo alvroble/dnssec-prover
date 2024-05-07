@@ -1017,7 +1017,7 @@ impl<M: PrimeModulus<U256>> U256Mod<M> {
 		if t1_extra_bit || slice_greater_than(&t1_on_r, &M::PRIME.0) {
 			let underflow;
 			(res, underflow) = sub_4(&t1_on_r, &M::PRIME.0);
-			debug_assert_eq!(t1_extra_bit, underflow,
+			debug_assert!(t1_extra_bit == underflow,
 				"The number (t1_extra_bit, t1_on_r) is at most 2m-1, so underflowing t1_on_r - m should happen iff t1_extra_bit is set.");
 		} else {
 			copy_from_slice!(res, 0, 4, t1_on_r);
