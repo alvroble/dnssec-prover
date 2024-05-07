@@ -37,6 +37,9 @@
 // Luckily, it seems to work fine in 1.63 with the feature flag (and RUSTC_BOOTSTRAP=1) enabled.
 #![cfg_attr(rust_1_63, feature(const_slice_from_raw_parts))]
 
+#![allow(clippy::new_without_default)] // why is this even a lint
+#![allow(clippy::result_unit_err)] // Why in the hell is this a lint?
+#![allow(clippy::get_first)] // Sometimes this improves readability
 #![allow(clippy::needless_lifetimes)] // lifetimes improve readability
 #![allow(clippy::needless_borrow)] // borrows indicate read-only/non-move
 #![allow(clippy::too_many_arguments)] // sometimes we don't have an option

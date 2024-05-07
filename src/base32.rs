@@ -43,7 +43,7 @@ pub fn decode(data: &str) -> Result<Vec<u8>, ()> {
 	// If the string has more characters than are required to alphabet_encode the number of bytes
 	// decodable, treat the string as invalid.
 	match data.len() % 8 { 1|3|6 => return Err(()), _ => {} }
-	Ok(decode_data(data, RFC4648_INV_ALPHABET)?)
+	decode_data(data, RFC4648_INV_ALPHABET)
 }
 
 /// Encode a byte slice into a base32 string.

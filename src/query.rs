@@ -150,7 +150,7 @@ fn handle_response(resp: &[u8], proof: &mut Vec<u8>, rrsig_key_names: &mut Vec<N
 	// Only read the answers and NSEC records in authorities, skipping additional entirely.
 	let mut min_ttl = u32::MAX;
 	for _ in 0..answers {
-		let (rr, ttl) = parse_wire_packet_rr(&mut read, &resp)?;
+		let (rr, ttl) = parse_wire_packet_rr(&mut read, resp)?;
 		write_rr(&rr, ttl, proof);
 		min_ttl = cmp::min(min_ttl, ttl);
 		if let RR::RRSig(rrsig) = rr { rrsig_key_names.push(rrsig.key_name); }
@@ -159,7 +159,7 @@ fn handle_response(resp: &[u8], proof: &mut Vec<u8>, rrsig_key_names: &mut Vec<N
 	for _ in 0..authorities {
 		// Only include records from the authority section if they are NSEC/3 (or signatures
 		// thereover). We don't care about NS records here.
-		let (rr, ttl) = parse_wire_packet_rr(&mut read, &resp)?;
+		let (rr, ttl) = parse_wire_packet_rr(&mut read, resp)?;
 		match &rr {
 			RR::RRSig(rrsig) => {
 				if rrsig.ty != NSec::TYPE && rrsig.ty != NSec3::TYPE {
@@ -251,7 +251,7 @@ impl ProofBuilder {
 		if self.pending_queries == 0 { return Err(()); }
 
 		let mut rrsig_key_names = Vec::new();
-		let min_ttl = handle_response(&resp, &mut self.proof, &mut rrsig_key_names)?;
+		let min_ttl = handle_response(resp, &mut self.proof, &mut rrsig_key_names)?;
 		self.min_ttl = cmp::min(self.min_ttl, min_ttl);
 		self.pending_queries -= 1;
 

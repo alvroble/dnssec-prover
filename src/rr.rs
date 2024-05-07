@@ -41,7 +41,7 @@ impl Name {
 		} else if n == 0 {
 			Some(".")
 		} else {
-			self.as_str().splitn(labels as usize - n as usize + 1, ".").last()
+			self.as_str().splitn(labels as usize - n as usize + 1, '.').last()
 		}
 	}
 }
@@ -61,7 +61,7 @@ impl TryFrom<String> for Name {
 		if *s.as_bytes().last().unwrap_or(&0) != b"."[0] { return Err(()); }
 		if s.len() > 255 { return Err(()); }
 		if s.chars().any(|c| !c.is_ascii_graphic() || c == '"') { return Err(()); }
-		for label in s.split(".") {
+		for label in s.split('.') {
 			if label.len() > 63 { return Err(()); }
 		}
 
@@ -259,7 +259,7 @@ impl Record for RR {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// A text resource record, containing arbitrary text data
 pub struct Txt {
 	/// The name this record is at.
@@ -272,9 +272,9 @@ pub struct Txt {
 }
 /// The wire type for TXT records
 pub const TXT_TYPE: u16 = 16;
-impl PartialOrd for Txt {
-	fn partial_cmp(&self, o: &Txt) -> Option<Ordering> {
-		Some(self.name.cmp(&o.name)
+impl Ord for Txt {
+	fn cmp(&self, o: &Txt) -> Ordering {
+		self.name.cmp(&o.name)
 			.then_with(|| {
 				// Compare in wire encoding form, i.e. compare in 255-byte chunks
 				for i in 1..(self.data.len() / 255) + 2 {
@@ -286,8 +286,11 @@ impl PartialOrd for Txt {
 					if !slice_cmp.is_eq() { return slice_cmp; }
 				}
 				Ordering::Equal
-			}))
+			})
 	}
+}
+impl PartialOrd for Txt {
+	fn partial_cmp(&self, o: &Txt) -> Option<Ordering> { Some(self.cmp(o)) }
 }
 impl StaticRecord for Txt {
 	const TYPE: u16 = TXT_TYPE;
@@ -816,7 +819,7 @@ impl StaticRecord for A {
 	fn read_from_data(name: Name, data: &[u8], _wire_packet: &[u8]) -> Result<Self, ()> {
 		if data.len() != 4 { return Err(()); }
 		let mut address = [0; 4];
-		address.copy_from_slice(&data);
+		address.copy_from_slice(data);
 		Ok(A { name, address })
 	}
 	fn write_u16_len_prefixed_data<W: Writer>(&self, out: &mut W) {
@@ -844,7 +847,7 @@ impl StaticRecord for AAAA {
 	fn read_from_data(name: Name, data: &[u8], _wire_packet: &[u8]) -> Result<Self, ()> {
 		if data.len() != 16 { return Err(()); }
 		let mut address = [0; 16];
-		address.copy_from_slice(&data);
+		address.copy_from_slice(data);
 		Ok(AAAA { name, address })
 	}
 	fn write_u16_len_prefixed_data<W: Writer>(&self, out: &mut W) {

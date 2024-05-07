@@ -173,7 +173,7 @@ where RI: IntoIterator<IntoIter = R>, R: Iterator<Item = &'r RRSig>,
 				ctx.update(&dnskey.alg.to_be_bytes());
 				ctx.update(&dnskey.pubkey);
 				let hash = ctx.finish();
-				if hash.as_ref() == &ds.digest {
+				if hash.as_ref() == ds.digest {
 					validated_dnskeys.push(*dnskey);
 					break;
 				}
@@ -183,7 +183,7 @@ where RI: IntoIterator<IntoIter = R>, R: Iterator<Item = &'r RRSig>,
 
 	let mut found_unsupported_alg = false;
 	for sig in sigs {
-		match verify_rrsig(sig, validated_dnskeys.iter().map(|k| *k), records.clone()) {
+		match verify_rrsig(sig, validated_dnskeys.iter().copied(), records.clone()) {
 			Ok(()) => return Ok(sig),
 			Err(ValidationError::UnsupportedAlgorithm) => {
 				// There may be redundant signatures by different keys, where one we don't
@@ -253,8 +253,8 @@ fn resolve_time(time: u32) -> u64 {
 }
 
 fn nsec_ord(a: &str, b: &str) -> Ordering {
-	let mut a_label_iter = a.rsplit(".");
-	let mut b_label_iter = b.rsplit(".");
+	let mut a_label_iter = a.rsplit('.');
+	let mut b_label_iter = b.rsplit('.');
 	loop {
 		match (a_label_iter.next(), b_label_iter.next()) {
 			(Some(_), None) => return Ordering::Greater,
@@ -267,11 +267,11 @@ fn nsec_ord(a: &str, b: &str) -> Ordering {
 						(Some(_), None) => return Ordering::Greater,
 						(None, Some(_)) => return Ordering::Less,
 						(Some(mut a), Some(mut b)) => {
-							if a >= 'A' as u8 && a <= 'Z' as u8 {
-								a += 'a' as u8 - 'A' as u8;
+							if a.is_ascii_uppercase() {
+								a += b'a' - b'A';
 							}
-							if b >= 'A' as u8 && b <= 'Z' as u8 {
-								b += 'a' as u8 - 'A' as u8;
+							if b.is_ascii_uppercase() {
+								b += b'a' - b'A';
 							}
 							if a != b { return a.cmp(&b); }
 						},
@@ -411,7 +411,7 @@ pub fn verify_rr_stream<'a>(inp: &'a [RR]) -> Result<VerifiedRRStream<'a>, Valid
 			.filter(|nsec| nsec.name.ends_with(zone.as_str()));
 		for nsec in nsec_search {
 			let name_matches = nsec.name.as_str() == name;
-			let name_contained = nsec_ord(&nsec.name,  &name) != Ordering::Greater &&
+			let name_contained = nsec_ord(&nsec.name,  name) != Ordering::Greater &&
 				nsec_ord(&nsec.next_name, name) == Ordering::Greater;
 			if (name_matches && !nsec.types.contains_type(ty)) || name_contained {
 				rrs_needing_non_existence_proofs
@@ -437,7 +437,7 @@ pub fn verify_rr_stream<'a>(inp: &'a [RR]) -> Result<VerifiedRRStream<'a>, Valid
 			{ continue; }
 
 			let mut hasher = crypto::hash::Hasher::sha1();
-			write_name(&mut hasher, &name);
+			write_name(&mut hasher, name);
 			hasher.update(&nsec3.salt);
 			for _ in 0..nsec3.hash_iterations {
 				let res = hasher.finish();
@@ -467,7 +467,7 @@ pub fn verify_rr_stream<'a>(inp: &'a [RR]) -> Result<VerifiedRRStream<'a>, Valid
 				hash
 			} else { continue };
 
-			let (start_hash_base32, _) = nsec3.name.split_once(".")
+			let (start_hash_base32, _) = nsec3.name.split_once('.')
 				.unwrap_or_else(|| { debug_assert!(false); ("", "")});
 			let start_hash = if let Ok(start_hash) = base32::decode(start_hash_base32) {
 				start_hash
@@ -532,7 +532,7 @@ impl<'a> VerifiedRRStream<'a> {
 				continue;
 			}
 
-			return self.verified_rrs.iter().filter(|rr| rr.name() == name).map(|rr| *rr).collect();
+			return self.verified_rrs.iter().filter(|rr| rr.name() == name).copied().collect();
 		}
 	}
 }

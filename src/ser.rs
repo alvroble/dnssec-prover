@@ -7,7 +7,7 @@ use crate::rr::*;
 use crate::query::QueryBuf;
 
 pub(crate) fn read_u8(inp: &mut &[u8]) -> Result<u8, ()> {
-	let res = *inp.get(0).ok_or(())?;
+	let res = *inp.first().ok_or(())?;
 	*inp = &inp[1..];
 	Ok(res)
 }
@@ -27,7 +27,7 @@ pub(crate) fn read_u32(inp: &mut &[u8]) -> Result<u32, ()> {
 }
 
 pub(crate) fn read_u8_len_prefixed_bytes(inp: &mut &[u8]) -> Result<Vec<u8>, ()> {
-	let len = *inp.get(0).ok_or(())?;
+	let len = *inp.first().ok_or(())?;
 	*inp = &inp[1..];
 	if inp.len() < len.into() { return Err(()); }
 	let mut res = Vec::with_capacity(len.into());
@@ -39,7 +39,7 @@ pub(crate) fn read_u8_len_prefixed_bytes(inp: &mut &[u8]) -> Result<Vec<u8>, ()>
 pub(crate) fn write_nsec_types_bitmap<W: Writer>(out: &mut W, types: &[u8; 8192]) {
 	for (idx, flags) in types.chunks(32).enumerate() {
 		debug_assert_eq!(flags.len(), 32);
-		if flags != &[0; 32] {
+		if flags != [0; 32] {
 			let last_nonzero_idx = flags.iter().rposition(|flag| *flag != 0)
 				.unwrap_or_else(|| { debug_assert!(false); 0 });
 			out.write(&(idx as u8).to_be_bytes());
@@ -52,7 +52,7 @@ pub(crate) fn nsec_types_bitmap_len(types: &[u8; 8192]) -> u16 {
 	let mut total_len = 0;
 	for flags in types.chunks(32) {
 		debug_assert_eq!(flags.len(), 32);
-		if flags != &[0; 32] {
+		if flags != [0; 32] {
 			total_len += 3 + flags.iter().rposition(|flag| *flag != 0)
 				.unwrap_or_else(|| { debug_assert!(false); 0 }) as u16;
 		}
@@ -102,7 +102,7 @@ fn read_wire_packet_labels(inp: &mut &[u8], wire_packet: &[u8], name: &mut Strin
 pub(crate) fn read_wire_packet_name(inp: &mut &[u8], wire_packet: &[u8]) -> Result<Name, ()> {
 	let mut name = String::with_capacity(1024);
 	read_wire_packet_labels(inp, wire_packet, &mut name)?;
-	Ok(name.try_into()?)
+	name.try_into()
 }
 
 pub(crate) trait Writer { fn write(&mut self, buf: &[u8]); }
@@ -115,7 +115,7 @@ pub(crate) fn write_name<W: Writer>(out: &mut W, name: &str) {
 	if canonical_name == "." {
 		out.write(&[0]);
 	} else {
-		for label in canonical_name.split(".") {
+		for label in canonical_name.split('.') {
 			out.write(&(label.len() as u8).to_be_bytes());
 			out.write(label.as_bytes());
 		}
@@ -126,7 +126,7 @@ pub(crate) fn name_len(name: &Name) -> u16 {
 		1
 	} else {
 		let mut res = 0;
-		for label in name.split(".") {
+		for label in name.split('.') {
 			res += 1 + label.len();
 		}
 		res as u16
