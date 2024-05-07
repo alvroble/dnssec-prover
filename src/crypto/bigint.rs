@@ -3,6 +3,11 @@
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 
+#[allow(clippy::needless_lifetimes)] // lifetimes improve readability
+#[allow(clippy::needless_borrow)] // borrows indicate read-only/non-move
+#[allow(clippy::too_many_arguments)] // sometimes we don't have an option
+#[allow(clippy::identity_op)] // sometimes identities improve readability for repeated actions
+
 // **************************************
 // * Implementations of math primitives *
 // **************************************
@@ -698,7 +703,7 @@ impl U4096 {
 		if self > m { return Err(()); }
 
 		let mut t = [0; WORD_COUNT_4096];
-		if &m.0[..WORD_COUNT_4096 - 1] == &[0; WORD_COUNT_4096 - 1] && m.0[WORD_COUNT_4096 - 1] == 1 {
+		if m.0[..WORD_COUNT_4096 - 1] == [0; WORD_COUNT_4096 - 1] && m.0[WORD_COUNT_4096 - 1] == 1 {
 			return Ok(U4096(t));
 		}
 		t[WORD_COUNT_4096 - 1] = 1;

@@ -6,6 +6,12 @@
 // Luckily, it seems to work fine in 1.63 with the feature flag (and RUSTC_BOOTSTRAP=1) enabled.
 #![cfg_attr(all(feature = "validation", rust_1_63), feature(const_slice_from_raw_parts))]
 
+#![allow(clippy::needless_lifetimes)] // lifetimes improve readability
+#![allow(clippy::needless_borrow)] // borrows indicate read-only/non-move
+#![allow(clippy::too_many_arguments)] // sometimes we don't have an option
+#![allow(clippy::identity_op)] // sometimes identities improve readability for repeated actions
+#![allow(clippy::erasing_op)] // sometimes identities improve readability for repeated actions
+
 extern crate alloc;
 
 pub mod rr;

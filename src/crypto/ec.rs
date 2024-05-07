@@ -142,9 +142,7 @@ impl<C: Curve + ?Sized> Point<C> {
 		let e: C::IntModP = C::IntModP::from_i(expected_x.clone().into_i());
 		if self.z == C::IntModP::ZERO { return Err(()); }
 		let ezz = e.mul(&self.z).mul(&self.z);
-		if self.x == ezz { Ok(()) } else {
-			if slow_check == Some(true) { Ok(()) } else { Err(()) }
-		}
+		if self.x == ezz || slow_check == Some(true) { Ok(()) } else { Err(()) }
 	}
 
 	fn double(&self) -> Result<Self, ()> {
