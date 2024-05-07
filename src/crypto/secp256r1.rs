@@ -29,11 +29,11 @@ struct P256();
 
 impl ec::Curve for P256 {
 	type Int = U256;
-	type IntModP = U256Mod<P>;
-	type IntModN = U256Mod<N>;
+	type CurveField = U256Mod<P>;
+	type ScalarField = U256Mod<N>;
 
-	type P = P;
-	type N = N;
+	type CurveModulus = P;
+	type ScalarModulus = N;
 
 	const A: U256Mod<P> = U256Mod::from_u256_panicking(U256::from_32_be_bytes_panicking(&hex_lit::hex!(
 		"ffffffff00000001000000000000000000000000fffffffffffffffffffffffc")));

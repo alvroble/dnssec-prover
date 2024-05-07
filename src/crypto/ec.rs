@@ -63,29 +63,29 @@ impl<M: PrimeModulus<U384> + Clone + Eq> IntMod for U384Mod<M> {
 pub(super) trait Curve : Copy {
 	type Int: Int;
 
-	// With const generics, both IntModP and IntModN can be replaced with a single IntMod.
-	type IntModP: IntMod<I = Self::Int>;
-	type IntModN: IntMod<I = Self::Int>;
+	// With const generics, both CurveField and ScalarField can be replaced with a single IntMod.
+	type CurveField: IntMod<I = Self::Int>;
+	type ScalarField: IntMod<I = Self::Int>;
 
-	type P: PrimeModulus<Self::Int>;
-	type N: PrimeModulus<Self::Int>;
+	type CurveModulus: PrimeModulus<Self::Int>;
+	type ScalarModulus: PrimeModulus<Self::Int>;
 
 	// Curve parameters y^2 = x^3 + ax + b
-	const A: Self::IntModP;
-	const B: Self::IntModP;
+	const A: Self::CurveField;
+	const B: Self::CurveField;
 
 	const G: Point<Self>;
 }
 
 #[derive(Clone, PartialEq, Eq)]
 pub(super) struct Point<C: Curve + ?Sized> {
-	x: C::IntModP,
-	y: C::IntModP,
-	z: C::IntModP,
+	x: C::CurveField,
+	y: C::CurveField,
+	z: C::CurveField,
 }
 
 impl<C: Curve + ?Sized> Point<C> {
-	fn on_curve(x: &C::IntModP, y: &C::IntModP) -> Result<(), ()> {
+	fn on_curve(x: &C::CurveField, y: &C::CurveField) -> Result<(), ()> {
 		let x_2 = x.square();
 		let x_3 = x_2.mul(&x);
 		let v = x_3.add(&C::A.mul(&x)).add(&C::B);
@@ -99,8 +99,8 @@ impl<C: Curve + ?Sized> Point<C> {
 	}
 
 	#[cfg(debug_assertions)]
-	fn on_curve_z(x: &C::IntModP, y: &C::IntModP, z: &C::IntModP) -> Result<(), ()> {
-		let m = C::IntModP::from_modinv_of(z.clone().into_i())?;
+	fn on_curve_z(x: &C::CurveField, y: &C::CurveField, z: &C::CurveField) -> Result<(), ()> {
+		let m = C::CurveField::from_modinv_of(z.clone().into_i())?;
 		let m_2 = m.square();
 		let m_3 = m_2.mul(&m);
 		let x_norm = x.mul(&m_2);
@@ -109,25 +109,25 @@ impl<C: Curve + ?Sized> Point<C> {
 	}
 
 	#[cfg(test)]
-	fn normalize_x(&self) -> Result<C::IntModP, ()> {
-		let m = C::IntModP::from_modinv_of(self.z.clone().into_i())?;
+	fn normalize_x(&self) -> Result<C::CurveField, ()> {
+		let m = C::CurveField::from_modinv_of(self.z.clone().into_i())?;
 		Ok(self.x.mul(&m.square()))
 	}
 
 	fn from_xy(x: C::Int, y: C::Int) -> Result<Self, ()> {
-		let x = C::IntModP::from_i(x);
-		let y = C::IntModP::from_i(y);
+		let x = C::CurveField::from_i(x);
+		let y = C::CurveField::from_i(y);
 		Self::on_curve(&x, &y)?;
-		Ok(Point { x, y, z: C::IntModP::ONE })
+		Ok(Point { x, y, z: C::CurveField::ONE })
 	}
 
-	pub(super) const fn from_xy_assuming_on_curve(x: C::IntModP, y: C::IntModP) -> Self {
-		Point { x, y, z: C::IntModP::ONE }
+	pub(super) const fn from_xy_assuming_on_curve(x: C::CurveField, y: C::CurveField) -> Self {
+		Point { x, y, z: C::CurveField::ONE }
 	}
 
 	/// Checks that `expected_x` is equal to our X affine coordinate (without modular inversion).
-	fn eq_x(&self, expected_x: &C::IntModN) -> Result<(), ()> {
-		debug_assert!(expected_x.clone().into_i() < C::P::PRIME, "N is < P");
+	fn eq_x(&self, expected_x: &C::ScalarField) -> Result<(), ()> {
+		debug_assert!(expected_x.clone().into_i() < C::CurveModulus::PRIME, "N is < P");
 
 		// If x is between N and P the below calculations will fail and we'll spuriously reject a
 		// signature and the wycheproof tests will fail. We should in theory accept such
@@ -136,18 +136,18 @@ impl<C: Curve + ?Sized> Point<C> {
 		#[allow(unused_mut, unused_assignments)]
 		let mut slow_check = None;
 		#[cfg(test)] {
-			slow_check = Some(C::IntModN::from_i(self.normalize_x()?.into_i()) == *expected_x);
+			slow_check = Some(C::ScalarField::from_i(self.normalize_x()?.into_i()) == *expected_x);
 		}
 
-		let e: C::IntModP = C::IntModP::from_i(expected_x.clone().into_i());
-		if self.z == C::IntModP::ZERO { return Err(()); }
+		let e: C::CurveField = C::CurveField::from_i(expected_x.clone().into_i());
+		if self.z == C::CurveField::ZERO { return Err(()); }
 		let ezz = e.mul(&self.z).mul(&self.z);
 		if self.x == ezz || slow_check == Some(true) { Ok(()) } else { Err(()) }
 	}
 
 	fn double(&self) -> Result<Self, ()> {
-		if self.y == C::IntModP::ZERO { return Err(()); }
-		if self.z == C::IntModP::ZERO { return Err(()); }
+		if self.y == C::CurveField::ZERO { return Err(()); }
+		if self.z == C::CurveField::ZERO { return Err(()); }
 
 		let s = self.x.times_four().mul(&self.y.square());
 		let z_2 = self.z.square();
@@ -191,7 +191,7 @@ impl<C: Curve + ?Sized> Point<C> {
 
 /// Calculates i * I + j * J
 #[allow(non_snake_case)]
-fn add_two_mul<C: Curve>(i: C::IntModN, I: &Point<C>, j: C::IntModN, J: &Point<C>) -> Result<Point<C>, ()> {
+fn add_two_mul<C: Curve>(i: C::ScalarField, I: &Point<C>, j: C::ScalarField, J: &Point<C>) -> Result<Point<C>, ()> {
 	let i = i.into_i();
 	let j = j.into_i();
 
@@ -273,14 +273,14 @@ pub(super) fn validate_ecdsa<C: Curve>(pk: &[u8], sig: &[u8], hash_input: &[u8])
 	// perfectly safe to do so, the wycheproof tests expect such signatures to be rejected, so we
 	// do so here.
 	let r_u256 = C::Int::from_be_bytes(r_bytes)?;
-	if r_u256 > C::N::PRIME { return Err(()); }
+	if r_u256 > C::ScalarModulus::PRIME { return Err(()); }
 	let s_u256 = C::Int::from_be_bytes(s_bytes)?;
-	if s_u256 > C::N::PRIME { return Err(()); }
+	if s_u256 > C::ScalarModulus::PRIME { return Err(()); }
 
-	let r = C::IntModN::from_i(r_u256);
-	let s_inv = C::IntModN::from_modinv_of(s_u256)?;
+	let r = C::ScalarField::from_i(r_u256);
+	let s_inv = C::ScalarField::from_modinv_of(s_u256)?;
 
-	let z = C::IntModN::from_i(C::Int::from_be_bytes(hash_input)?);
+	let z = C::ScalarField::from_i(C::Int::from_be_bytes(hash_input)?);
 
 	let u_a = z.mul(&s_inv);
 	let u_b = r.mul(&s_inv);

@@ -29,11 +29,11 @@ struct P384();
 
 impl ec::Curve for P384 {
 	type Int = U384;
-	type IntModP = U384Mod<P>;
-	type IntModN = U384Mod<N>;
+	type CurveField = U384Mod<P>;
+	type ScalarField = U384Mod<N>;
 
-	type P = P;
-	type N = N;
+	type CurveModulus = P;
+	type ScalarModulus = N;
 
 	const A: U384Mod<P> = U384Mod::from_u384_panicking(U384::from_48_be_bytes_panicking(&hex_lit::hex!(
 		"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000fffffffc")));
