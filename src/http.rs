@@ -17,6 +17,11 @@
 
 extern crate alloc;
 
+/// The maximum number of requests we will make when building a proof or the maximum number of
+/// [`rr::RRSig`] sets we'll validate records from when validating proofs.
+// Note that this is duplicated exactly in src/lib.rs
+pub const MAX_PROOF_STEPS: usize = 20;
+
 pub mod rr;
 pub mod ser;
 pub mod query;

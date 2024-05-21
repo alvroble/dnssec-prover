@@ -17,6 +17,7 @@ use tokio_crate::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::rr::*;
 use crate::ser::*;
+use crate::MAX_PROOF_STEPS;
 
 // In testing use a rather small buffer to ensure we hit the allocation paths sometimes. In
 // production, we should generally never actually need to go to heap as DNS messages are rarely
@@ -192,7 +193,6 @@ pub fn fuzz_proof_builder(mut response_stream: &[u8]) {
 	let _ = builder.finish_proof();
 }
 
-const MAX_REQUESTS: usize = 10;
 /// A simple state machine which will generate a series of queries and process the responses until
 /// it has built a DNSSEC proof.
 ///
@@ -230,7 +230,7 @@ impl ProofBuilder {
 		(ProofBuilder {
 			proof: Vec::new(),
 			min_ttl: u32::MAX,
-			dnskeys_requested: Vec::with_capacity(MAX_REQUESTS),
+			dnskeys_requested: Vec::with_capacity(MAX_PROOF_STEPS),
 			pending_queries: 1,
 			queries_made: 1,
 		}, initial_query)
@@ -242,7 +242,7 @@ impl ProofBuilder {
 	/// [`Self::process_response`]. Once this returns false, [`Self::finish_proof`] should be used
 	/// to (possibly) get the final proof.
 	pub fn awaiting_responses(&self) -> bool {
-		self.pending_queries > 0 && self.queries_made <= MAX_REQUESTS
+		self.pending_queries > 0 && self.queries_made <= MAX_PROOF_STEPS
 	}
 
 	/// Processes a query response from the recursive resolver, returning a list of new queries to
@@ -273,7 +273,7 @@ impl ProofBuilder {
 				}
 			}
 		}
-		if self.queries_made <= MAX_REQUESTS {
+		if self.queries_made <= MAX_PROOF_STEPS {
 			Ok(new_queries)
 		} else {
 			Ok(Vec::new())
@@ -284,7 +284,7 @@ impl ProofBuilder {
 	/// used to cache the proof (i.e. the lowest TTL of all records which were used to build the
 	/// proof).
 	pub fn finish_proof(self) -> Result<(Vec<u8>, u32), ()> {
-		if self.pending_queries > 0 || self.queries_made > MAX_REQUESTS {
+		if self.pending_queries > 0 || self.queries_made > MAX_PROOF_STEPS {
 			Err(())
 		} else {
 			Ok((self.proof, self.min_ttl))

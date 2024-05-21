@@ -9,6 +9,7 @@ use crate::base32;
 use crate::crypto;
 use crate::rr::*;
 use crate::ser::write_name;
+use crate::MAX_PROOF_STEPS;
 
 /// Gets the trusted root anchors
 ///
@@ -43,6 +44,9 @@ pub enum ValidationError {
 	UnsupportedAlgorithm,
 	/// The provided data was invalid or signatures did not validate.
 	Invalid,
+	/// We would need to validate more than [`MAX_PROOF_STEPS`] sets of [`RRSig`]s to validate the
+	/// proof we were given.
+	ValidationCountLimited,
 }
 
 fn verify_rrsig<'a, RR: WriteableRecord, Keys>(sig: &RRSig, dnskeys: Keys, mut records: Vec<&RR>)
@@ -191,6 +195,10 @@ where RI: IntoIterator<IntoIter = R>, R: Iterator<Item = &'r RRSig>,
 				// no more, return UnsupportedAlgorithm
 				found_unsupported_alg = true;
 			},
+			Err(ValidationError::ValidationCountLimited) => {
+				debug_assert!(false, "verify_rrsig doesn't internally limit");
+				return Err(ValidationError::ValidationCountLimited);
+			},
 			Err(ValidationError::Invalid) => {
 				// If a signature is invalid, just immediately fail, avoiding KeyTrap issues.
 				return Err(ValidationError::Invalid);
@@ -317,6 +325,7 @@ pub fn verify_rr_stream<'a>(inp: &'a [RR]) -> Result<VerifiedRRStream<'a>, Valid
 	let mut latest_inception = 0;
 	let mut earliest_expiry = u64::MAX;
 	let mut min_ttl = u32::MAX;
+	let mut rrsig_sets_validated = 0;
 	'next_zone: while zone == "." || !pending_ds_sets.is_empty() {
 		let next_ds_set;
 		if let Some((next_zone, ds_set)) = pending_ds_sets.pop() {
@@ -325,6 +334,11 @@ pub fn verify_rr_stream<'a>(inp: &'a [RR]) -> Result<VerifiedRRStream<'a>, Valid
 		} else {
 			debug_assert_eq!(zone, ".");
 			next_ds_set = None;
+		}
+
+		rrsig_sets_validated += 1;
+		if rrsig_sets_validated > MAX_PROOF_STEPS {
+			return Err(ValidationError::ValidationCountLimited);
 		}
 
 		let dnskey_rrsigs = inp.iter()
@@ -344,16 +358,26 @@ pub fn verify_rr_stream<'a>(inp: &'a [RR]) -> Result<VerifiedRRStream<'a>, Valid
 		latest_inception = cmp::max(latest_inception, resolve_time(verified_dnskey_rrsig.inception));
 		earliest_expiry = cmp::min(earliest_expiry, resolve_time(verified_dnskey_rrsig.expiration));
 		min_ttl = cmp::min(min_ttl, verified_dnskey_rrsig.orig_ttl);
+
 		for rrsig in inp.iter()
 			.filter_map(|rr| if let RR::RRSig(sig) = rr { Some(sig) } else { None })
 			.filter(move |rrsig| rrsig.key_name.as_str() == zone && rrsig.ty != DnsKey::TYPE)
 		{
+			rrsig_sets_validated += 1;
+			if rrsig_sets_validated > MAX_PROOF_STEPS {
+				return Err(ValidationError::ValidationCountLimited);
+			}
+
 			if !rrsig.name.ends_with(zone) { return Err(ValidationError::Invalid); }
 			let signed_records = inp.iter()
 				.filter(|rr| rr.name() == &rrsig.name && rr.ty() == rrsig.ty);
 			match verify_rrsig(rrsig, dnskeys.clone(), signed_records.clone().collect()) {
 				Ok(()) => {},
 				Err(ValidationError::UnsupportedAlgorithm) => continue,
+				Err(ValidationError::ValidationCountLimited) => {
+					debug_assert!(false, "verify_rrsig doesn't internally limit");
+					return Err(ValidationError::ValidationCountLimited);
+				},
 				Err(ValidationError::Invalid) => {
 					// If a signature is invalid, just immediately fail, avoiding KeyTrap issues.
 					return Err(ValidationError::Invalid);

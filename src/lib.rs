@@ -49,6 +49,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 
+/// The maximum number of requests we will make when building a proof or the maximum number of
+/// [`rr::RRSig`] sets we'll validate records from when validating proofs.
+// Note that this is duplicated exactly in src/http.rs
+pub const MAX_PROOF_STEPS: usize = 20;
+
 #[cfg(feature = "validation")]
 mod base32;
 
