@@ -66,7 +66,7 @@ pub(crate) fn read_nsec_types_bitmap(inp: &mut &[u8]) -> Result<[u8; 8192], ()> 
 		let block = *inp.get(0).ok_or(())?;
 		let len = *inp.get(1).ok_or(())?;
 		*inp = &inp[2..];
-		if inp.len() < len as usize { return Err(()); }
+		if inp.len() < block as usize * 32 + len as usize { return Err(()); }
 		res[block as usize * 32..block as usize * 32 + len as usize]
 			.copy_from_slice(&inp[..len as usize]);
 		*inp = &inp[len as usize..];
