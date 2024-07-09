@@ -700,7 +700,7 @@ mod tests {
 	fn mattcorallo_txt_record() -> (Txt, RRSig) {
 		let txt_resp = Txt {
 			name: "matt.user._bitcoin-payment.mattcorallo.com.".try_into().unwrap(),
-			data: "bitcoin:?b12=lno1qsgqmqvgm96frzdg8m0gc6nzeqffvzsqzrxqy32afmr3jn9ggkwg3egfwch2hy0l6jut6vfd8vpsc3h89l6u3dm4q2d6nuamav3w27xvdmv3lpgklhg7l5teypqz9l53hj7zvuaenh34xqsz2sa967yzqkylfu9xtcd5ymcmfp32h083e805y7jfd236w9afhavqqvl8uyma7x77yun4ehe9pnhu2gekjguexmxpqjcr2j822xr7q34p078gzslf9wpwz5y57alxu99s0z2ql0kfqvwhzycqq45ehh58xnfpuek80hw6spvwrvttjrrq9pphh0dpydh06qqspp5uq4gpyt6n9mwexde44qv7lstzzq60nr40ff38u27un6y53aypmx0p4qruk2tf9mjwqlhxak4znvna5y".to_owned().into_bytes(),
+			data: "bitcoin:?b12=lno1qsgqmqvgm96frzdg8m0gc6nzeqffvzsqzrxqy32afmr3jn9ggkwg3egfwch2hy0l6jut6vfd8vpsc3h89l6u3dm4q2d6nuamav3w27xvdmv3lpgklhg7l5teypqz9l53hj7zvuaenh34xqsz2sa967yzqkylfu9xtcd5ymcmfp32h083e805y7jfd236w9afhavqqvl8uyma7x77yun4ehe9pnhu2gekjguexmxpqjcr2j822xr7q34p078gzslf9wpwz5y57alxu99s0z2ql0kfqvwhzycqq45ehh58xnfpuek80hw6spvwrvttjrrq9pphh0dpydh06qqspp5uq4gpyt6n9mwexde44qv7lstzzq60nr40ff38u27un6y53aypmx0p4qruk2tf9mjwqlhxak4znvna5y".try_into().unwrap(),
 		};
 		let txt_rrsig = RRSig {
 			name: "matt.user._bitcoin-payment.mattcorallo.com.".try_into().unwrap(),
@@ -744,7 +744,7 @@ mod tests {
 	fn bitcoin_ninja_txt_record() -> (Txt, RRSig) {
 		let txt_resp = Txt {
 			name: "txt_test.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
-			data: "dnssec_prover_test".to_owned().into_bytes(),
+			data: "dnssec_prover_test".try_into().unwrap(),
 		};
 		let txt_rrsig = RRSig {
 			name: "txt_test.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
@@ -772,28 +772,28 @@ mod tests {
 	fn bitcoin_ninja_txt_sort_edge_cases_records() -> (Vec<Txt>, RRSig) {
 		let txts = vec![Txt {
 			name: "txt_sort_order.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
-			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab".to_owned().into_bytes(),
+			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab".try_into().unwrap(),
 		}, Txt {
 			name: "txt_sort_order.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
-			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".to_owned().into_bytes(),
+			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".try_into().unwrap(),
 		}, Txt {
 			name: "txt_sort_order.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
-			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaa".to_owned().into_bytes(),
+			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaa".try_into().unwrap(),
 		}, Txt {
 			name: "txt_sort_order.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
-			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaba".to_owned().into_bytes(),
+			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaba".try_into().unwrap(),
 		}, Txt {
 			name: "txt_sort_order.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
-			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".to_owned().into_bytes(),
+			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".try_into().unwrap(),
 		}, Txt {
 			name: "txt_sort_order.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
-			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab".to_owned().into_bytes(),
+			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab".try_into().unwrap(),
 		}, Txt {
 			name: "txt_sort_order.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
-			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".to_owned().into_bytes(),
+			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".try_into().unwrap(),
 		}, Txt {
 			name: "txt_sort_order.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
-			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaba".to_owned().into_bytes(),
+			data: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaba".try_into().unwrap(),
 		}];
 		let rrsig = RRSig {
 			name: "txt_sort_order.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
@@ -809,7 +809,7 @@ mod tests {
 		let name: Name = (pfx.to_owned() + ".wildcard_test.dnssec_proof_tests.bitcoin.ninja.").try_into().unwrap();
 		let txt_resp = Txt {
 			name: name.clone(),
-			data: "wildcard_test".to_owned().into_bytes(),
+			data: "wildcard_test".try_into().unwrap(),
 		};
 		let txt_rrsig = RRSig {
 			name: name.clone(),
@@ -910,7 +910,7 @@ mod tests {
 	fn bitcoin_ninja_nsec_record() -> (Txt, RRSig) {
 		let txt_resp = Txt {
 			name: "a.nsec_tests.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
-			data: "txt_a".to_owned().into_bytes(),
+			data: "txt_a".try_into().unwrap(),
 		};
 		let txt_rrsig = RRSig {
 			name: "a.nsec_tests.dnssec_proof_tests.bitcoin.ninja.".try_into().unwrap(),
@@ -925,7 +925,7 @@ mod tests {
 		let name: Name = (pfx.to_owned() + ".wildcard_test.nsec_tests.dnssec_proof_tests.bitcoin.ninja.").try_into().unwrap();
 		let txt_resp = Txt {
 			name: name.clone(),
-			data: "wildcard_test".to_owned().into_bytes(),
+			data: "wildcard_test".try_into().unwrap(),
 		};
 		let txt_rrsig = RRSig {
 			name: name.clone(),
@@ -951,7 +951,7 @@ mod tests {
 		let name: Name = (pfx.to_owned() + ".wildcard_test.nsec_tests.dnssec_proof_tests.bitcoin.ninja.").try_into().unwrap();
 		let txt_resp = Txt {
 			name: name.clone(),
-			data: "wildcard_test".to_owned().into_bytes(),
+			data: "wildcard_test".try_into().unwrap(),
 		};
 		let txt_rrsig = RRSig {
 			name: name.clone(),
@@ -996,7 +996,7 @@ mod tests {
 		assert_eq!(verified_rrs.verified_rrs.len(), 1);
 		if let RR::Txt(txt) = &verified_rrs.verified_rrs[0] {
 			assert_eq!(txt.name.as_str(), "matt.user._bitcoin-payment.mattcorallo.com.");
-			assert_eq!(txt.data, b"bitcoin:?b12=lno1qsgqmqvgm96frzdg8m0gc6nzeqffvzsqzrxqy32afmr3jn9ggkwg3egfwch2hy0l6jut6vfd8vpsc3h89l6u3dm4q2d6nuamav3w27xvdmv3lpgklhg7l5teypqz9l53hj7zvuaenh34xqsz2sa967yzqkylfu9xtcd5ymcmfp32h083e805y7jfd236w9afhavqqvl8uyma7x77yun4ehe9pnhu2gekjguexmxpqjcr2j822xr7q34p078gzslf9wpwz5y57alxu99s0z2ql0kfqvwhzycqq45ehh58xnfpuek80hw6spvwrvttjrrq9pphh0dpydh06qqspp5uq4gpyt6n9mwexde44qv7lstzzq60nr40ff38u27un6y53aypmx0p4qruk2tf9mjwqlhxak4znvna5y");
+			assert_eq!(txt.data.as_vec(), b"bitcoin:?b12=lno1qsgqmqvgm96frzdg8m0gc6nzeqffvzsqzrxqy32afmr3jn9ggkwg3egfwch2hy0l6jut6vfd8vpsc3h89l6u3dm4q2d6nuamav3w27xvdmv3lpgklhg7l5teypqz9l53hj7zvuaenh34xqsz2sa967yzqkylfu9xtcd5ymcmfp32h083e805y7jfd236w9afhavqqvl8uyma7x77yun4ehe9pnhu2gekjguexmxpqjcr2j822xr7q34p078gzslf9wpwz5y57alxu99s0z2ql0kfqvwhzycqq45ehh58xnfpuek80hw6spvwrvttjrrq9pphh0dpydh06qqspp5uq4gpyt6n9mwexde44qv7lstzzq60nr40ff38u27un6y53aypmx0p4qruk2tf9mjwqlhxak4znvna5y");
 		} else { panic!(); }
 		assert_eq!(verified_rrs.valid_from, 1709047250); // The mattcorallo.com. DNSKEY RRSig was created last
 		assert_eq!(verified_rrs.expires, 1709359258); // The mattcorallo.com. DS RRSig expires first
@@ -1041,11 +1041,11 @@ mod tests {
 		assert_eq!(verified_rrs.verified_rrs.len(), 3);
 		if let RR::Txt(txt) = &verified_rrs.verified_rrs[0] {
 			assert_eq!(txt.name.as_str(), "matt.user._bitcoin-payment.mattcorallo.com.");
-			assert_eq!(txt.data, b"bitcoin:?b12=lno1qsgqmqvgm96frzdg8m0gc6nzeqffvzsqzrxqy32afmr3jn9ggkwg3egfwch2hy0l6jut6vfd8vpsc3h89l6u3dm4q2d6nuamav3w27xvdmv3lpgklhg7l5teypqz9l53hj7zvuaenh34xqsz2sa967yzqkylfu9xtcd5ymcmfp32h083e805y7jfd236w9afhavqqvl8uyma7x77yun4ehe9pnhu2gekjguexmxpqjcr2j822xr7q34p078gzslf9wpwz5y57alxu99s0z2ql0kfqvwhzycqq45ehh58xnfpuek80hw6spvwrvttjrrq9pphh0dpydh06qqspp5uq4gpyt6n9mwexde44qv7lstzzq60nr40ff38u27un6y53aypmx0p4qruk2tf9mjwqlhxak4znvna5y");
+			assert_eq!(txt.data.as_vec(), b"bitcoin:?b12=lno1qsgqmqvgm96frzdg8m0gc6nzeqffvzsqzrxqy32afmr3jn9ggkwg3egfwch2hy0l6jut6vfd8vpsc3h89l6u3dm4q2d6nuamav3w27xvdmv3lpgklhg7l5teypqz9l53hj7zvuaenh34xqsz2sa967yzqkylfu9xtcd5ymcmfp32h083e805y7jfd236w9afhavqqvl8uyma7x77yun4ehe9pnhu2gekjguexmxpqjcr2j822xr7q34p078gzslf9wpwz5y57alxu99s0z2ql0kfqvwhzycqq45ehh58xnfpuek80hw6spvwrvttjrrq9pphh0dpydh06qqspp5uq4gpyt6n9mwexde44qv7lstzzq60nr40ff38u27un6y53aypmx0p4qruk2tf9mjwqlhxak4znvna5y");
 		} else { panic!(); }
 		if let RR::Txt(txt) = &verified_rrs.verified_rrs[1] {
 			assert_eq!(txt.name.as_str(), "txt_test.dnssec_proof_tests.bitcoin.ninja.");
-			assert_eq!(txt.data, b"dnssec_prover_test");
+			assert_eq!(txt.data.as_vec(), b"dnssec_prover_test");
 		} else { panic!(); }
 		if let RR::CName(cname) = &verified_rrs.verified_rrs[2] {
 			assert_eq!(cname.name.as_str(), "cname_test.dnssec_proof_tests.bitcoin.ninja.");
@@ -1057,7 +1057,7 @@ mod tests {
 		assert_eq!(filtered_rrs.len(), 1);
 		if let RR::Txt(txt) = &filtered_rrs[0] {
 			assert_eq!(txt.name.as_str(), "txt_test.dnssec_proof_tests.bitcoin.ninja.");
-			assert_eq!(txt.data, b"dnssec_prover_test");
+			assert_eq!(txt.data.as_vec(), b"dnssec_prover_test");
 		} else { panic!(); }
 	}
 
@@ -1096,7 +1096,7 @@ mod tests {
 		assert_eq!(verified_rrs.verified_rrs.len(), 2);
 		if let RR::Txt(txt) = &verified_rrs.verified_rrs[0] {
 			assert_eq!(txt.name.as_str(), "asdf.wildcard_test.dnssec_proof_tests.bitcoin.ninja.");
-			assert_eq!(txt.data, b"wildcard_test");
+			assert_eq!(txt.data.as_vec(), b"wildcard_test");
 		} else { panic!(); }
 		if let RR::CName(cname) = &verified_rrs.verified_rrs[1] {
 			assert_eq!(cname.name.as_str(), "asdf.cname_wildcard_test.dnssec_proof_tests.bitcoin.ninja.");
@@ -1108,7 +1108,7 @@ mod tests {
 		assert_eq!(filtered_rrs.len(), 1);
 		if let RR::Txt(txt) = &filtered_rrs[0] {
 			assert_eq!(txt.name.as_str(), "asdf.wildcard_test.dnssec_proof_tests.bitcoin.ninja.");
-			assert_eq!(txt.data, b"wildcard_test");
+			assert_eq!(txt.data.as_vec(), b"wildcard_test");
 		} else { panic!(); }
 	}
 
@@ -1130,7 +1130,7 @@ mod tests {
 		assert_eq!(filtered_rrs.len(), 1);
 		if let RR::Txt(txt) = &filtered_rrs[0] {
 			assert_eq!(txt.name.as_str(), "a.nsec_tests.dnssec_proof_tests.bitcoin.ninja.");
-			assert_eq!(txt.data, b"txt_a");
+			assert_eq!(txt.data.as_vec(), b"txt_a");
 		} else { panic!(); }
 	}
 
@@ -1161,7 +1161,7 @@ mod tests {
 			assert_eq!(filtered_rrs.len(), 1);
 			if let RR::Txt(txt) = &filtered_rrs[0] {
 				assert_eq!(txt.name, name);
-				assert_eq!(txt.data, b"wildcard_test");
+				assert_eq!(txt.data.as_vec(), b"wildcard_test");
 			} else { panic!(); }
 			Ok(())
 		};

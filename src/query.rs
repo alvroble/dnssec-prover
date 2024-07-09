@@ -522,7 +522,7 @@ mod tests {
 			assert_eq!(resolved_rrs.len(), 1);
 			if let RR::Txt(txt) = &resolved_rrs[0] {
 				assert_eq!(txt.name.as_str(), "txt_test.dnssec_proof_tests.bitcoin.ninja.");
-				assert_eq!(txt.data, b"dnssec_prover_test");
+				assert_eq!(txt.data.as_vec(), b"dnssec_prover_test");
 			} else { panic!(); }
 		}
 	}
@@ -568,7 +568,7 @@ mod tests {
 			assert_eq!(resolved_rrs.len(), 1);
 			if let RR::Txt(txt) = &resolved_rrs[0] {
 				assert_eq!(txt.name.as_str(), "matt.user._bitcoin-payment.mattcorallo.com.");
-				assert!(txt.data.starts_with(b"bitcoin:"));
+				assert!(txt.data.as_vec().starts_with(b"bitcoin:"));
 			} else { panic!(); }
 		}
 	}
@@ -594,7 +594,7 @@ mod tests {
 			assert_eq!(resolved_rrs.len(), 1);
 			if let RR::Txt(txt) = &resolved_rrs[0] {
 				assert_eq!(txt.name.as_str(), "cname.wildcard_test.dnssec_proof_tests.bitcoin.ninja.");
-				assert_eq!(txt.data, b"wildcard_test");
+				assert_eq!(txt.data.as_vec(), b"wildcard_test");
 			} else { panic!(); }
 		}
 	}

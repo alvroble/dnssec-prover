@@ -8,9 +8,10 @@ use alloc::string::String;
 use alloc::borrow::ToOwned;
 use alloc::format;
 
-use core::cmp::{self, Ordering};
+use core::cmp::Ordering;
 use core::fmt;
 use core::fmt::Write;
+use core::num::NonZeroU8;
 
 use crate::ser::*;
 
@@ -260,6 +261,126 @@ impl Record for RR {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+struct TxtBytePart {
+	/// The bytes themselves.
+	///
+	/// Bytes at or beyond [`Self::len`] may be filled with garbage and should be ignored.
+	bytes: [u8; 255],
+	/// The number of bytes which are to be used.
+	len: NonZeroU8,
+}
+
+/// The bytes of a [`Txt`] record.
+///
+/// They are stored as a series of byte buffers so that we can reconstruct the exact encoding which
+/// was used for signatures, however they're really just a simple list of bytes, and the underlying
+/// encoding should be ignored.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TxtBytes {
+	/// The series of byte buffers storing the bytes themselves.
+	chunks: Vec<TxtBytePart>,
+}
+
+impl TxtBytes {
+	/// Constructs a new [`TxtBytes`] from the given bytes
+	///
+	/// Fails if there are too many bytes to fit in a [`Txt`] record.
+	pub fn new(bytes: &[u8]) -> Result<TxtBytes, ()> {
+		if bytes.len() > 255*255 + 254 { return Err(()); }
+		let mut chunks = Vec::with_capacity((bytes.len() + 254) / 255);
+		let mut data_write = &bytes[..];
+		while !data_write.is_empty() {
+			let split_pos = core::cmp::min(255, data_write.len());
+			let mut part = TxtBytePart {
+				bytes: [0; 255],
+				len: (split_pos as u8).try_into().expect("Cannot be 0 as data_write is not empty"),
+			};
+			part.bytes[..split_pos].copy_from_slice(&data_write[..split_pos]);
+			chunks.push(part);
+			data_write = &data_write[split_pos..];
+		}
+		debug_assert_eq!(chunks.len(), (bytes.len() + 254) / 255);
+		Ok(TxtBytes { chunks })
+	}
+
+	/// Gets the total number of bytes represented in this record.
+	pub fn len(&self) -> usize {
+		let mut res = 0;
+		for chunk in self.chunks.iter() {
+			res += chunk.len.get() as usize;
+		}
+		res
+	}
+
+	/// The length of the bytes when serialized on the wire.
+	pub fn serialized_len(&self) -> u16 {
+		let mut len = 0u16;
+		for chunk in self.chunks.iter() {
+			len = len.checked_add(1 + chunk.len.get() as u16)
+				.expect("TxtBytes objects must fit in 2^16 - 1 bytes when serialized");
+		}
+		len
+	}
+
+	/// Gets the bytes as a flat `Vec` of `u8`s. This should be considered
+	pub fn as_vec(&self) -> Vec<u8> {
+		let mut res = Vec::with_capacity(self.len());
+		for chunk in self.chunks.iter() {
+			res.extend_from_slice(&chunk.bytes[..chunk.len.get() as usize]);
+		}
+		res
+	}
+
+	/// Gets an iterator over all the bytes in this [`TxtBytes`].
+	pub fn iter<'a>(&'a self) -> TxtBytesIter<'a> {
+		TxtBytesIter {
+			bytes: self,
+			next_part: 0,
+			next_byte: 0,
+		}
+	}
+}
+
+impl TryFrom<&str> for TxtBytes {
+	type Error = ();
+	fn try_from(s: &str) -> Result<TxtBytes, ()> {
+		TxtBytes::new(s.as_bytes())
+	}
+}
+
+impl TryFrom<&[u8]> for TxtBytes {
+	type Error = ();
+	fn try_from(b: &[u8]) -> Result<TxtBytes, ()> {
+		TxtBytes::new(b)
+	}
+}
+
+/// An iterator over the bytes in a [`TxtBytes`]
+pub struct TxtBytesIter<'a> {
+	bytes: &'a TxtBytes,
+	next_part: usize,
+	next_byte: u8,
+}
+
+impl<'a> Iterator for TxtBytesIter<'a> {
+	type Item = u8;
+	fn next(&mut self) -> Option<u8> {
+		self.bytes.chunks.get(self.next_part)
+			.and_then(|part| if self.next_byte >= part.len.get() {
+				None
+			} else {
+				if self.next_byte == part.len.get() - 1 {
+					self.next_byte = 0;
+					self.next_part += 1;
+				} else {
+					self.next_byte += 1;
+				}
+				Some(part.bytes[self.next_byte as usize])
+			})
+	}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// A text resource record, containing arbitrary text data
 pub struct Txt {
 	/// The name this record is at.
@@ -268,7 +389,7 @@ pub struct Txt {
 	///
 	/// While this is generally UTF-8-valid, there is no specific requirement that it be, and thus
 	/// is an arbitrary series of bytes here.
-	pub data: Vec<u8>,
+	pub data: TxtBytes,
 }
 /// The wire type for TXT records
 pub const TXT_TYPE: u16 = 16;
@@ -276,16 +397,24 @@ impl Ord for Txt {
 	fn cmp(&self, o: &Txt) -> Ordering {
 		self.name.cmp(&o.name)
 			.then_with(|| {
-				// Compare in wire encoding form, i.e. compare in 255-byte chunks
-				for i in 1..(self.data.len() / 255) + 2 {
-					let start = (i - 1)*255;
-					let self_len = cmp::min(i * 255, self.data.len());
-					let o_len = cmp::min(i * 255, o.data.len());
-					let slice_cmp = self_len.cmp(&o_len)
-						.then_with(|| self.data[start..self_len].cmp(&o.data[start..o_len]));
-					if !slice_cmp.is_eq() { return slice_cmp; }
+				// Compare in wire encoding form, i.e. compare checks in order
+				let mut o_chunks = o.data.chunks.iter();
+				for chunk in self.data.chunks.iter() {
+					if let Some(o_chunk) = o_chunks.next() {
+						let chunk_cmp = chunk.len.cmp(&o_chunk.len)
+							.then_with(||chunk.bytes[..chunk.len.get() as usize]
+								.cmp(&o_chunk.bytes[..o_chunk.len.get() as usize]));
+						if !chunk_cmp.is_eq() { return chunk_cmp; }
+					} else {
+						// self has more chunks than o
+						return Ordering::Greater;
+					}
 				}
-				Ordering::Equal
+				if o_chunks.next().is_some() {
+					Ordering::Less
+				} else {
+					Ordering::Equal
+				}
 			})
 	}
 }
@@ -296,37 +425,54 @@ impl StaticRecord for Txt {
 	const TYPE: u16 = TXT_TYPE;
 	fn name(&self) -> &Name { &self.name }
 	fn json(&self) -> String {
-		if let Ok(s) = core::str::from_utf8(&self.data) {
-			if s.chars().all(|c| !c.is_control() && c != '"' && c != '\\') {
-				return format!("{{\"type\":\"txt\",\"name\":\"{}\",\"contents\":\"{}\"}}", self.name.0, s);
+		let mut res = format!("{{\"type\":\"txt\",\"name\":\"{}\",\"contents\":", self.name.0);
+		if self.data.iter().all(|b| b >= 0x20 && b <= 0x7e) {
+			res += "\"";
+			for b in self.data.iter() {
+				res.push(b as char);
 			}
+			res += "\"}";
+		} else {
+			res += "[";
+			let mut first_b = true;
+			for b in self.data.iter() {
+				if !first_b { res += ","; }
+				write!(&mut res, "{}", b).expect("Shouldn't fail to write to a String");
+				first_b = false;
+			}
+			res += "]}";
 		}
-		format!("{{\"type\":\"txt\",\"name\":\"{}\",\"contents\":{:?}}}", self.name.0, &self.data[..])
+		res
 	}
 	fn read_from_data(name: Name, mut data: &[u8], _wire_packet: &[u8]) -> Result<Self, ()> {
-		let mut parsed_data = Vec::with_capacity(data.len().saturating_sub(1));
+		let mut parts = TxtBytes {
+			chunks: Vec::with_capacity((data.len() + 255) / 256),
+		};
+		let mut serialized_len = 0;
 		while !data.is_empty() {
-			let len = read_u8(&mut data)? as usize;
-			if data.len() < len { return Err(()); }
-			parsed_data.extend_from_slice(&data[..len]);
-			data = &data[len..];
+			let len = read_u8(&mut data)?;
+			if data.len() < len as usize { return Err(()); }
+			if len == 0 { return Err(()); }
+			serialized_len += 1 + len as u32;
+			if serialized_len > u16::MAX as u32 {
+				return Err(());
+			}
+			let mut part = TxtBytePart {
+				bytes: [0; 255],
+				len: len.try_into().expect("We already checked 0 above"),
+			};
+			part.bytes[..len as usize].copy_from_slice(&data[..len as usize]);
+			data = &data[len as usize..];
+			parts.chunks.push(part);
 		}
 		debug_assert!(data.is_empty());
-		Ok(Txt { name, data: parsed_data })
+		Ok(Txt { name, data: parts })
 	}
 	fn write_u16_len_prefixed_data<W: Writer>(&self, out: &mut W) {
-		let len = (self.data.len() + (self.data.len() + 254) / 255) as u16;
-		out.write(&len.to_be_bytes());
-
-		let mut data_write = &self.data[..];
-		out.write(&[data_write.len().try_into().unwrap_or(255)]);
-		while !data_write.is_empty() {
-			let split_pos = core::cmp::min(255, data_write.len());
-			out.write(&data_write[..split_pos]);
-			data_write = &data_write[split_pos..];
-			if !data_write.is_empty() {
-				out.write(&[data_write.len().try_into().unwrap_or(255)]);
-			}
+		out.write(&self.data.serialized_len().to_be_bytes());
+		for chunk in self.data.chunks.iter() {
+			out.write(&[chunk.len.get()]);
+			out.write(&chunk.bytes[..chunk.len.get() as usize]);
 		}
 	}
 }
