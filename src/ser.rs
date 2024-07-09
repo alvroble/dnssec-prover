@@ -173,7 +173,10 @@ pub(crate) fn parse_rr(inp: &mut &[u8]) -> Result<RR, ()> {
 pub fn parse_rr_stream(mut inp: &[u8]) -> Result<Vec<RR>, ()> {
 	let mut res = Vec::with_capacity(32);
 	while !inp.is_empty() {
-		res.push(parse_rr(&mut inp)?);
+		let rr = parse_rr(&mut inp)?;
+		#[cfg(fuzzing)]
+		let _ = rr.json(); // Make sure we can JSON the RR when fuzzing, cause why not
+		res.push(rr);
 	}
 	Ok(res)
 }
