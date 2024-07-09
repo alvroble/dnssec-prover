@@ -369,13 +369,14 @@ impl<'a> Iterator for TxtBytesIter<'a> {
 			.and_then(|part| if self.next_byte >= part.len.get() {
 				None
 			} else {
+				let res = Some(part.bytes[self.next_byte as usize]);
 				if self.next_byte == part.len.get() - 1 {
 					self.next_byte = 0;
 					self.next_part += 1;
 				} else {
 					self.next_byte += 1;
 				}
-				Some(part.bytes[self.next_byte as usize])
+				res
 			})
 	}
 }
