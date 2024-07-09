@@ -187,6 +187,12 @@ where RI: IntoIterator<IntoIter = R>, R: Iterator<Item = &'r RRSig>,
 
 	let mut found_unsupported_alg = false;
 	for sig in sigs {
+		if !validated_dnskeys.iter().any(|key| key.key_tag() == sig.key_tag) {
+			// Some DNS servers include spurious RRSig records signed by the ZSK covering the
+			// DNSKEY set (looking at you OVH). This is harmless (but wasteful) and we should
+			// ignore such signatures rather than immediately failing.
+			continue;
+		}
 		match verify_rrsig(sig, validated_dnskeys.iter().copied(), records.clone()) {
 			Ok(()) => return Ok(sig),
 			Err(ValidationError::UnsupportedAlgorithm) => {
