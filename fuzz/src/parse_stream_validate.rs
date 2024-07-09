@@ -67,7 +67,7 @@ fn run_test_cases() {
 			let path = test.unwrap().path();
 			fs::File::open(&path).unwrap().read_to_end(&mut data).unwrap();
 
-			let _ = parse_rr_stream(data).as_ref()
+			let _ = parse_rr_stream(&data).as_ref()
 				.map(|rrs| verify_rr_stream(rrs));
 		}
 	}
