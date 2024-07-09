@@ -401,7 +401,6 @@ impl StaticRecord for CName {
 	}
 	fn read_from_data(name: Name, mut data: &[u8], wire_packet: &[u8]) -> Result<Self, ()> {
 		let res = CName { name, canonical_name: read_wire_packet_name(&mut data, wire_packet)? };
-		debug_assert!(data.is_empty());
 		Ok(res)
 	}
 	fn write_u16_len_prefixed_data<W: Writer>(&self, out: &mut W) {
@@ -432,7 +431,6 @@ impl StaticRecord for DName {
 	}
 	fn read_from_data(name: Name, mut data: &[u8], wire_packet: &[u8]) -> Result<Self, ()> {
 		let res = DName { name, delegation_name: read_wire_packet_name(&mut data, wire_packet)? };
-		debug_assert!(data.is_empty());
 		Ok(res)
 	}
 	fn write_u16_len_prefixed_data<W: Writer>(&self, out: &mut W) {
@@ -877,7 +875,6 @@ impl StaticRecord for NS {
 	}
 	fn read_from_data(name: Name, mut data: &[u8], wire_packet: &[u8]) -> Result<Self, ()> {
 		let res = NS { name, name_server: read_wire_packet_name(&mut data, wire_packet)? };
-		debug_assert!(data.is_empty());
 		Ok(res)
 	}
 	fn write_u16_len_prefixed_data<W: Writer>(&self, out: &mut W) {
