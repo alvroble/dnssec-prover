@@ -33,10 +33,6 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(rustdoc::private_intra_doc_links)]
 
-// const_slice_from_raw_parts was stabilized in 1.64, however we support building on 1.63 as well.
-// Luckily, it seems to work fine in 1.63 with the feature flag (and RUSTC_BOOTSTRAP=1) enabled.
-#![cfg_attr(rust_1_63, feature(const_slice_from_raw_parts))]
-
 #![allow(clippy::new_without_default)] // why is this even a lint
 #![allow(clippy::result_unit_err)] // Why in the hell is this a lint?
 #![allow(clippy::get_first)] // Sometimes this improves readability

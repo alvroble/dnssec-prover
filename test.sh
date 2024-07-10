@@ -1,12 +1,6 @@
 #!/bin/sh
 set -eox
 
-RUSTC_MINOR_VERSION=$(rustc --version | awk '{ split($2,a,"."); print a[2] }')
-if [ "$RUSTC_MINOR_VERSION" = 63 ]; then
-	export RUSTC_BOOTSTRAP=1
-	export RUSTFLAGS=--cfg=rust_1_63
-fi
-
 cargo test --no-default-features
 cargo test
 cargo test --no-default-features --features std
@@ -23,7 +17,7 @@ cargo build --lib --features std,tokio,validation --release
 cargo build --bin http_proof_gen --features build_server
 cargo doc --features std,tokio,validation
 cd fuzz
-RUSTFLAGS="$RUSTFLAGS --cfg=fuzzing" RUSTC_BOOTSTRAP=1 cargo build --features stdin_fuzz
-RUSTFLAGS="$RUSTFLAGS --cfg=fuzzing" RUSTC_BOOTSTRAP=1 cargo test
+RUSTFLAGS="--cfg=fuzzing" RUSTC_BOOTSTRAP=1 cargo build --features stdin_fuzz
+RUSTFLAGS="--cfg=fuzzing" RUSTC_BOOTSTRAP=1 cargo test
 cd ../bench
-RUSTFLAGS="$RUSTFLAGS --cfg=dnssec_validate_bench" cargo bench
+RUSTFLAGS="--cfg=dnssec_validate_bench" cargo bench

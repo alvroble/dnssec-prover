@@ -29,11 +29,23 @@ const fn const_subslice<'a, T>(a: &'a [T], start: usize, end: usize) -> &'a [T] 
 	assert!(end >= start);
 	let mut startptr = a.as_ptr();
 	startptr = unsafe { startptr.add(start) };
-	let len = end - start;
-	// The docs for from_raw_parts do not mention any requirements that the pointer be valid if the
+	let len: usize = end - start;
+	// We should use alloc::slice::from_raw_parts here, but sadly it was only stabilized as const
+	// in 1.64, whereas we need an MSRV of 1.63. Instead we rely on that which "you should not rely
+	// on" - that slices are laid out as a simple tuple of pointer + length.
+	//
+	// The Rust language reference doesn't specify the layout of slices at all, but does give us a
+	// hint, saying
+	//   Note: Though you should not rely on this, all pointers to DSTs are currently twice the
+	//   size of the size of usize and have the same alignment.
+	// This leaves only two possibilities (for today's rust) - `(length, pointer)` and
+	// `(pointer, length)`. Today, in practice, this seems to always be `(pointer, length)`, so we
+	// just assume it and hope to move to a later MSRV soon.
+	unsafe { core::mem::transmute((startptr, len)) }
+	/*// The docs for from_raw_parts do not mention any requirements that the pointer be valid if the
 	// length is zero, aside from requiring proper alignment (which is met here). Thus,
 	// one-past-the-end should be an acceptable pointer for a 0-length slice.
-	unsafe { alloc::slice::from_raw_parts(startptr, len) }
+	unsafe { alloc::slice::from_raw_parts(startptr, len) }*/
 }
 
 /// Const version of `dest[dest_start..dest_end].copy_from_slice(source)`
