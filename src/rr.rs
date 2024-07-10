@@ -19,7 +19,7 @@ use crate::ser::*;
 ///
 /// It must end with a ".", be no longer than 255 bytes, consist of only printable ASCII
 /// characters and each label may be no longer than 63 bytes.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Name(String);
 impl Name {
 	/// Gets the underlying human-readable domain name
@@ -76,7 +76,7 @@ impl TryFrom<&str> for Name {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A supported Resource Record
 ///
 /// Note that we only currently support a handful of RR types as needed to generate and validate
@@ -260,7 +260,7 @@ impl Record for RR {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct TxtBytePart {
 	/// The bytes themselves.
 	///
@@ -275,7 +275,7 @@ struct TxtBytePart {
 /// They are stored as a series of byte buffers so that we can reconstruct the exact encoding which
 /// was used for signatures, however they're really just a simple list of bytes, and the underlying
 /// encoding should be ignored.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TxtBytes {
 	/// The series of byte buffers storing the bytes themselves.
 	chunks: Vec<TxtBytePart>,
@@ -381,7 +381,7 @@ impl<'a> Iterator for TxtBytesIter<'a> {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 /// A text resource record, containing arbitrary text data
 pub struct Txt {
 	/// The name this record is at.
@@ -478,7 +478,7 @@ impl StaticRecord for Txt {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A TLS Certificate Association resource record containing information about the TLS certificate
 /// which should be expected when communicating with the host at the given name.
 ///
@@ -529,7 +529,7 @@ impl StaticRecord for TLSA {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A Canonical Name resource record, referring all queries for this name to another name.
 pub struct CName {
 	/// The name this record is at.
@@ -557,7 +557,7 @@ impl StaticRecord for CName {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A Delegation Name resource record, referring all queries for subdomains of this name to another
 /// subtree of the DNS.
 pub struct DName {
@@ -588,7 +588,7 @@ impl StaticRecord for DName {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A public key resource record which can be used to validate [`RRSig`]s.
 pub struct DnsKey {
 	/// The name this record is at.
@@ -651,7 +651,7 @@ impl DnsKey {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A Delegation Signer resource record which indicates that some alternative [`DnsKey`] can sign
 /// for records in the zone which matches [`self.name`].
 pub struct DS {
@@ -705,7 +705,7 @@ impl StaticRecord for DS {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A Resource Record (set) Signature resource record. This contains a signature over all the
 /// resources records of the given type at the given name.
 pub struct RRSig {
@@ -789,7 +789,7 @@ impl StaticRecord for RRSig {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A mask used in [`NSec`] and [`NSec3`] records which indicates the resource record types which
 /// exist at the (hash of the) name described in [`Record::name`].
 pub struct NSecTypeMask([u8; 8192]);
@@ -838,7 +838,7 @@ impl NSecTypeMask {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A Next Secure Record resource record. This indicates a range of possible names for which there
 /// is no such record.
 pub struct NSec {
@@ -880,7 +880,7 @@ impl StaticRecord for NSec {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A Next Secure Record resource record. This indicates a range of possible names for which there
 /// is no such record.
 pub struct NSec3 {
@@ -945,7 +945,7 @@ impl StaticRecord for NSec3 {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// An IPv4 Address resource record
 pub struct A {
 	/// The name this record is at.
@@ -973,7 +973,7 @@ impl StaticRecord for A {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// An IPv6 Address resource record
 pub struct AAAA {
 	/// The name this record is at.
@@ -1001,7 +1001,7 @@ impl StaticRecord for AAAA {
 	}
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A Name Server resource record, which indicates the server responsible for handling queries for
 /// a zone.
 pub struct NS {
