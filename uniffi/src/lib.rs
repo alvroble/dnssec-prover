@@ -6,6 +6,7 @@ use dnssec_prover::ser::parse_rr_stream;
 use dnssec_prover::validation::{verify_rr_stream, ValidationError};
 use dnssec_prover::rr::Name;
 use dnssec_prover::query::ProofBuilder as NativeProofBuilder;
+pub use dnssec_prover::query::ProofBuildingError;
 use dnssec_prover::query::{QueryBuf};
 
 use std::collections::VecDeque;
@@ -35,17 +36,17 @@ impl ProofBuilder {
 	///
 	/// After calling this, [`get_next_query`] should be called until pending queries are exhausted and
 	/// no more pending queries exist, at which point [`get_unverified_proof`] should be called.
-	pub fn process_query_response(&self, response: Vec<u8>) {
+	pub fn process_query_response(&self, response: Vec<u8>) -> Result<(), ProofBuildingError> {
 		if response.len() < u16::MAX as usize {
 			let mut answer = QueryBuf::new_zeroed(response.len() as u16);
 			answer.copy_from_slice(&response);
 			let mut us = self.0.lock().unwrap();
-			if let Ok(queries) = us.0.process_response(&answer) {
-				for query in queries {
-					us.1.push_back(query);
-				}
+			let queries = us.0.process_response(&answer)?;
+			for query in queries {
+				us.1.push_back(query);
 			}
 		}
+		Ok(())
 	}
 
 	/// Gets the next query (if any) that should be sent to the resolver for the given proof builder.

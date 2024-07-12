@@ -9,7 +9,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-dnssec-prover = { path = "../", default-features = false, features = ["validation"] }
+dnssec-prover = { path = "../", default-features = false, features = ["validation", "std"] }
 uniffi = { version = "0.27", default-features = false }
 
 [build-dependencies]

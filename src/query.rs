@@ -114,6 +114,72 @@ fn build_query(domain: &Name, ty: u16) -> QueryBuf {
 	query
 }
 
+/// Possible errors when building queries. Note that there are many possible errors, but only a
+/// handful of common ones are captured in the variants here.
+// Note that this is also duplicated in uniffi in the udl
+#[derive(PartialEq, Eq)]
+pub enum ProofBuildingError {
+	/// The server provided an invalid response.
+	///
+	/// We failed to parse the server's response or it contained nonsense that we couldn't
+	/// understand.
+	InvalidResponse,
+	/// The server we are querying gave us a response code of SERVFAIL or FORMERR.
+	///
+	/// This generally indicates it failed to connect to some DNS server required to resolve our
+	/// queries or it couldn't understand the response it got back from such a server.
+	ServerFailure,
+	/// The server we are querying gave us a response code of NXDOMAIN on our very first query.
+	///
+	/// This indicates the name being queried for does not exist.
+	NoSuchName,
+	/// The server we are querying gave us a response code of NXDOMAIN.
+	///
+	/// This indicates the server couldn't find an answer to one of our queries.
+	MissingRecord,
+	/// The server responded indicating it could not authenticate the response using DNSSEC.
+	///
+	/// This generally indicates that the data we are querying for was not DNSSEC-signed.
+	/// It could also indicate that the server we are trying to query using does not validate
+	/// DNSSEC.
+	Unauthenticated,
+	/// A query was provided when no query was expected.
+	///
+	/// This indicates a bug in the code driving the proof builder, rather than an issue with the
+	/// DNS.
+	NoResponseExpected,
+}
+
+impl core::fmt::Display for ProofBuildingError {
+	fn fmt(&self, fmt: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+		match self {
+			ProofBuildingError::InvalidResponse =>
+				fmt.write_str("The server provided a response we could not understand"),
+			ProofBuildingError::ServerFailure =>
+				fmt.write_str("The server indicated it failed to talk to a required authorative DNS server"),
+			ProofBuildingError::NoSuchName =>
+				fmt.write_str("The server indicated the requested hostname does not exist"),
+			ProofBuildingError::MissingRecord =>
+				fmt.write_str("The server indicated one of the records we needed to build our proof did not exist"),
+			ProofBuildingError::Unauthenticated =>
+				fmt.write_str("The server indicated the records we needed were not DNSSEC-authenticated"),
+			ProofBuildingError::NoResponseExpected =>
+				fmt.write_str("Internal error in the proof building software"),
+		}
+	}
+}
+
+impl core::fmt::Debug for ProofBuildingError {
+	fn fmt(&self, fmt: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
+		core::fmt::Display::fmt(self, fmt)
+	}
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for ProofBuildingError {
+
+}
+
 #[cfg(fuzzing)]
 /// Read some input and parse it as if it came from a server, for fuzzing.
 pub fn fuzz_response(response: &[u8]) {
@@ -121,37 +187,53 @@ pub fn fuzz_response(response: &[u8]) {
 	let _ = handle_response(response, &mut proof, &mut names);
 }
 
-fn handle_response(resp: &[u8], proof: &mut Vec<u8>, rrsig_key_names: &mut Vec<Name>) -> Result<u32, ()> {
+/// Handle a response, returning the minimum TTL of any answer.
+///
+/// Note that the caller must map errors of [`ProofBuildingError::MissingRecord`] to
+/// [`ProofBuildingError::NoSuchName`] if this was the first query!
+fn handle_response(resp: &[u8], proof: &mut Vec<u8>, rrsig_key_names: &mut Vec<Name>) -> Result<u32, ProofBuildingError> {
 	let mut read: &[u8] = resp;
-	if read_u16(&mut read)? != TXID { return Err(()); }
+	let resp_txid = read_u16(&mut read).map_err(|()| ProofBuildingError::InvalidResponse)?;
+	if resp_txid != TXID { return Err(ProofBuildingError::InvalidResponse); }
 	// 2 byte transaction ID
-	let flags = read_u16(&mut read)?;
+	let flags = read_u16(&mut read).map_err(|()| ProofBuildingError::InvalidResponse)?;
 	if flags & 0b1000_0000_0000_0000 == 0 {
-		return Err(());
+		// This message is tagged as a query, not a response?
+		return Err(ProofBuildingError::InvalidResponse);
 	}
-	if flags & 0b0111_1010_0000_0111 != 0 {
-		return Err(());
+	if flags & 0b1111 == 2 || flags & 0b1111 == 1 {
+		return Err(ProofBuildingError::ServerFailure);
+	}
+	if flags & 0b1111 == 3 {
+		// NXDOMAIN, note that the caller should map this to NoSuchName if applicable.
+		return Err(ProofBuildingError::MissingRecord);
+	}
+	// Check that OPCODE, Truncation, and RCODE are all 0s
+	if flags & 0b0111_1010_0000_1111 != 0 {
+		return Err(ProofBuildingError::InvalidResponse);
 	}
 	if flags & 0b10_0000 == 0 {
-		return Err(());
+		// The AD bit was unset
+		return Err(ProofBuildingError::Unauthenticated);
 	}
-	let questions = read_u16(&mut read)?;
-	if questions != 1 { return Err(()); }
-	let answers = read_u16(&mut read)?;
-	if answers == 0 { return Err(()); }
-	let authorities = read_u16(&mut read)?;
-	let _additional = read_u16(&mut read)?;
+	let questions = read_u16(&mut read).map_err(|()| ProofBuildingError::InvalidResponse)?;
+	if questions != 1 { return Err(ProofBuildingError::InvalidResponse); }
+	let answers = read_u16(&mut read).map_err(|()| ProofBuildingError::InvalidResponse)?;
+	if answers == 0 { return Err(ProofBuildingError::InvalidResponse); }
+	let authorities = read_u16(&mut read).map_err(|()| ProofBuildingError::InvalidResponse)?;
+	let _additional = read_u16(&mut read).map_err(|()| ProofBuildingError::InvalidResponse)?;
 
 	for _ in 0..questions {
-		read_wire_packet_name(&mut read, resp)?;
-		read_u16(&mut read)?; // type
-		read_u16(&mut read)?; // class
+		read_wire_packet_name(&mut read, resp).map_err(|()| ProofBuildingError::InvalidResponse)?;
+		read_u16(&mut read).map_err(|()| ProofBuildingError::InvalidResponse)?; // type
+		read_u16(&mut read).map_err(|()| ProofBuildingError::InvalidResponse)?; // class
 	}
 
 	// Only read the answers and NSEC records in authorities, skipping additional entirely.
 	let mut min_ttl = u32::MAX;
 	for _ in 0..answers {
-		let (rr, ttl) = parse_wire_packet_rr(&mut read, resp)?;
+		let (rr, ttl) = parse_wire_packet_rr(&mut read, resp)
+			.map_err(|()| ProofBuildingError::InvalidResponse)?;
 		write_rr(&rr, ttl, proof);
 		min_ttl = cmp::min(min_ttl, ttl);
 		if let RR::RRSig(rrsig) = rr { rrsig_key_names.push(rrsig.key_name); }
@@ -160,7 +242,8 @@ fn handle_response(resp: &[u8], proof: &mut Vec<u8>, rrsig_key_names: &mut Vec<N
 	for _ in 0..authorities {
 		// Only include records from the authority section if they are NSEC/3 (or signatures
 		// thereover). We don't care about NS records here.
-		let (rr, ttl) = parse_wire_packet_rr(&mut read, resp)?;
+		let (rr, ttl) = parse_wire_packet_rr(&mut read, resp)
+			.map_err(|()| ProofBuildingError::InvalidResponse)?;
 		match &rr {
 			RR::RRSig(rrsig) => {
 				if rrsig.ty != NSec::TYPE && rrsig.ty != NSec3::TYPE {
@@ -247,11 +330,20 @@ impl ProofBuilder {
 
 	/// Processes a query response from the recursive resolver, returning a list of new queries to
 	/// send to the resolver.
-	pub fn process_response(&mut self, resp: &QueryBuf) -> Result<Vec<QueryBuf>, ()> {
-		if self.pending_queries == 0 { return Err(()); }
+	pub fn process_response(&mut self, resp: &QueryBuf) -> Result<Vec<QueryBuf>, ProofBuildingError> {
+		if self.pending_queries == 0 { return Err(ProofBuildingError::NoResponseExpected); }
 
 		let mut rrsig_key_names = Vec::new();
-		let min_ttl = handle_response(resp, &mut self.proof, &mut rrsig_key_names)?;
+		let min_ttl = match handle_response(resp, &mut self.proof, &mut rrsig_key_names) {
+			Ok(min_ttl) => min_ttl,
+			Err(err) => {
+				if self.proof.is_empty() && err == ProofBuildingError::MissingRecord {
+					return Err(ProofBuildingError::NoSuchName);
+				} else {
+					return Err(err);
+				}
+			},
+		};
 		self.min_ttl = cmp::min(self.min_ttl, min_ttl);
 		self.pending_queries -= 1;
 
@@ -283,6 +375,8 @@ impl ProofBuilder {
 	/// Finalizes the proof, if one is available, and returns it as well as the TTL that should be
 	/// used to cache the proof (i.e. the lowest TTL of all records which were used to build the
 	/// proof).
+	///
+	/// Only fails if too many queries have been made or there are still some pending queries.
 	pub fn finish_proof(self) -> Result<(Vec<u8>, u32), ()> {
 		if self.pending_queries > 0 || self.queries_made > MAX_PROOF_STEPS {
 			Err(())
@@ -339,7 +433,7 @@ macro_rules! build_proof_impl {
 			let response = $read_response(&mut $stream)
 				$(.await?; $async_ok)??; // Either await?; Ok(())?, or just ?
 			let new_queries = builder.process_response(&response)
-				.map_err(|()| Error::new(ErrorKind::Other, "Bad response"))?;
+				.map_err(|err| Error::new(ErrorKind::Other, err))?;
 			for query in new_queries {
 				$send_query(&mut $stream, &query)
 					$(.await?; $async_ok)??; // Either await?; Ok(())?, or just ?
@@ -626,5 +720,17 @@ mod tests {
 		}
 	}
 
-
+	#[cfg(feature = "tokio")]
+	#[tokio::test]
+	async fn test_no_dnssec() {
+		// Google believes DNSSEC is a bad idea due to 10 year old information and a cargo cult
+		// within Mountain View. Thus we assume they'll never bother to use the security it
+		// provides.
+		for resolver in ["1.1.1.1:53", "8.8.8.8:53", "9.9.9.9:53"] {
+			let sockaddr = resolver.to_socket_addrs().unwrap().next().unwrap();
+			let query_name = "google.com.".try_into().unwrap();
+			let err = build_a_proof_async(sockaddr, &query_name).await.unwrap_err();
+			assert_eq!(err.into_inner().unwrap().downcast().unwrap(), Box::new(ProofBuildingError::Unauthenticated));
+		}
+	}
 }

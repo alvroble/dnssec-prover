@@ -3,7 +3,7 @@
 use dnssec_prover::ser::parse_rr_stream;
 use dnssec_prover::validation::{verify_rr_stream, ValidationError};
 use dnssec_prover::rr::Name;
-use dnssec_prover::query::{ProofBuilder, QueryBuf};
+use dnssec_prover::query::{ProofBuilder, ProofBuildingError, QueryBuf};
 
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -16,7 +16,7 @@ use core::fmt::Write;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
-pub struct WASMProofBuilder(ProofBuilder, VecDeque<QueryBuf>);
+pub struct WASMProofBuilder(ProofBuilder, VecDeque<QueryBuf>, Option<ProofBuildingError>);
 
 #[wasm_bindgen]
 /// Builds a proof builder which can generate a proof for records of the given `ty`pe at the given
@@ -29,7 +29,7 @@ pub fn init_proof_builder(mut name: String, ty: u16) -> Option<WASMProofBuilder>
 		let (builder, initial_query) = ProofBuilder::new(&qname, ty);
 		let mut queries = VecDeque::with_capacity(4);
 		queries.push_back(initial_query);
-		Some(WASMProofBuilder(builder, queries))
+		Some(WASMProofBuilder(builder, queries, None))
 	} else {
 		None
 	}
@@ -41,12 +41,17 @@ pub fn init_proof_builder(mut name: String, ty: u16) -> Option<WASMProofBuilder>
 /// After calling this, [`get_next_query`] should be called until pending queries are exhausted and
 /// no more pending queries exist, at which point [`get_unverified_proof`] should be called.
 pub fn process_query_response(proof_builder: &mut WASMProofBuilder, response: Vec<u8>) {
+	if proof_builder.2.is_some() { return; }
 	if response.len() < u16::MAX as usize {
 		let mut answer = QueryBuf::new_zeroed(response.len() as u16);
 		answer.copy_from_slice(&response);
-		if let Ok(queries) = proof_builder.0.process_response(&answer) {
-			for query in queries {
-				proof_builder.1.push_back(query);
+		match proof_builder.0.process_response(&answer) {
+			Ok(queries) =>
+				for query in queries {
+					proof_builder.1.push_back(query);
+				}
+			Err(e) => {
+				proof_builder.2 = Some(e);
 			}
 		}
 	}
@@ -58,6 +63,7 @@ pub fn process_query_response(proof_builder: &mut WASMProofBuilder, response: Ve
 ///
 /// Once the resolver responds [`process_query_response`] should be called with the response.
 pub fn get_next_query(proof_builder: &mut WASMProofBuilder) -> Option<Vec<u8>> {
+	if proof_builder.2.is_some() { return None; }
 	if let Some(query) = proof_builder.1.pop_front() {
 		Some(query.into_vec())
 	} else {
@@ -68,8 +74,12 @@ pub fn get_next_query(proof_builder: &mut WASMProofBuilder) -> Option<Vec<u8>> {
 #[wasm_bindgen]
 /// Gets the final, unverified, proof once all queries fetched via [`get_next_query`] have
 /// completed and their responses passed to [`process_query_response`].
-pub fn get_unverified_proof(proof_builder: WASMProofBuilder) -> Option<Vec<u8>> {
-	proof_builder.0.finish_proof().ok().map(|(proof, _ttl)| proof)
+pub fn get_unverified_proof(proof_builder: WASMProofBuilder) -> Result<Vec<u8>, String> {
+	if let Some(e) = proof_builder.2 {
+		return Err(format!("{:?}", e));
+	}
+	proof_builder.0.finish_proof().map(|(proof, _ttl)| proof)
+		.map_err(|()| "Too many queries required to build proof".to_string())
 }
 
 #[wasm_bindgen]
