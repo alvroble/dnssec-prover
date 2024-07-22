@@ -8,7 +8,7 @@ description = "A simple crate which allows for the creation and validation of tr
 keywords = ["dns", "dnssec", "rfc9102", "no-std"]
 categories = ["cryptography", "no-std"]
 edition = "2021"
-rust-version = "1.60.0"
+rust-version = "1.61.0"
 
 [package.metadata.docs.rs]
 features = ["std", "validation", "tokio"]
