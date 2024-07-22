@@ -15,7 +15,7 @@
 //! conservative MSRV policy, allowing it to be used in as many places as possible.
 //!
 //! Most of the crate's logic is feature-gated, and *all dependencies are optional*:
-//!  * By default, the `validate` feature is set, using `ring` to validate DNSSEC signatures and
+//!  * By default, the `validation` feature is set, allowing to validate DNSSEC signatures and
 //!    proofs using the [`validation`] module.
 //!  * The `std` feature enables the [`query`] module, allowing for the building of proofs by
 //!    querying a recursive resolver over TCP.
@@ -24,10 +24,6 @@
 //!  * Finally, the crate can be built as a binary using the `build_server` feature, responding to
 //!    queries over HTTP GET calls to `/dnssecproof?d=domain.name.&t=RecordType` with DNSSEC
 //!    proofs.
-//!
-//! Note that this library's MSRV is 1.64 for normal building, however builds fine on 1.63 (and
-//! possibly earlier) when `RUSTC_BOOTSTRAP=1` is set, as it relies on the
-//! `const_slice_from_raw_parts` feature.
 
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
