@@ -997,6 +997,44 @@ impl U256 {
 	pub(super) const fn three() -> U256 { U256([0, 0, 0, 3]) }
 }
 
+/// Do mont reduction (but avoid putting it in the templated [`U256Mod`] to avoid having two copies
+/// for different primes
+const fn u256_mont_reduction_given_prime(mu: [u64; 8], prime: &[u64; 4], negative_prime_inv_mod_r: &[u64; 4]) -> U256 {
+	// The definition of REDC (with some names changed):
+	// v = ((mu % R) * N') mod R
+	// t = (mu + v*N) / R
+	// if t >= N { t - N } else { t }
+
+	// mu % R is just the bottom 4 bytes of mu
+	let mu_mod_r = const_subslice(&mu, 4, 8);
+	// v = ((mu % R) * negative_modulus_inverse) % R
+	let mut v = mul_4(&mu_mod_r, negative_prime_inv_mod_r);
+	const ZEROS: &[u64; 4] = &[0; 4];
+	copy_from_slice!(v, 0, 4, ZEROS); // mod R
+
+	// t_on_r = (mu + v*modulus) / R
+	let t0 = mul_4(const_subslice(&v, 4, 8), prime);
+	let (t1, t1_extra_bit) = add_8(&t0, &mu);
+
+	// Note that dividing t1 by R is simply a matter of shifting right by 4 bytes.
+	// We only need to maintain 4 bytes (plus `t1_extra_bit` which is implicitly an extra bit)
+	// because t_on_r is guarantee to be, at max, 2*m - 1.
+	let t1_on_r = const_subslice(&t1, 0, 4);
+
+	let mut res = [0; 4];
+	// The modulus is only 4 bytes, so t1_extra_bit implies we're definitely larger than the
+	// modulus.
+	if t1_extra_bit || slice_greater_than(&t1_on_r, prime) {
+		let underflow;
+		(res, underflow) = sub_4(&t1_on_r, prime);
+		debug_assert!(t1_extra_bit == underflow,
+			"The number (t1_extra_bit, t1_on_r) is at most 2m-1, so underflowing t1_on_r - m should happen iff t1_extra_bit is set.");
+	} else {
+		copy_from_slice!(res, 0, 4, t1_on_r);
+	}
+	U256(res)
+}
+
 // Values modulus M::PRIME.0, stored in montgomery form.
 impl<M: PrimeModulus<U256>> U256Mod<M> {
 	const fn mont_reduction(mu: [u64; 8]) -> Self {
@@ -1023,39 +1061,7 @@ impl<M: PrimeModulus<U256>> U256Mod<M> {
 			assert!(slice_equal(const_subslice(&r_squared_mod_prime, 4, 8), &M::R_SQUARED_MOD_PRIME.0));
 		}
 
-		// The definition of REDC (with some names changed):
-		// v = ((mu % R) * N') mod R
-		// t = (mu + v*N) / R
-		// if t >= N { t - N } else { t }
-
-		// mu % R is just the bottom 4 bytes of mu
-		let mu_mod_r = const_subslice(&mu, 4, 8);
-		// v = ((mu % R) * negative_modulus_inverse) % R
-		let mut v = mul_4(&mu_mod_r, &M::NEGATIVE_PRIME_INV_MOD_R.0);
-		const ZEROS: &[u64; 4] = &[0; 4];
-		copy_from_slice!(v, 0, 4, ZEROS); // mod R
-
-		// t_on_r = (mu + v*modulus) / R
-		let t0 = mul_4(const_subslice(&v, 4, 8), &M::PRIME.0);
-		let (t1, t1_extra_bit) = add_8(&t0, &mu);
-
-		// Note that dividing t1 by R is simply a matter of shifting right by 4 bytes.
-		// We only need to maintain 4 bytes (plus `t1_extra_bit` which is implicitly an extra bit)
-		// because t_on_r is guarantee to be, at max, 2*m - 1.
-		let t1_on_r = const_subslice(&t1, 0, 4);
-
-		let mut res = [0; 4];
-		// The modulus is only 4 bytes, so t1_extra_bit implies we're definitely larger than the
-		// modulus.
-		if t1_extra_bit || slice_greater_than(&t1_on_r, &M::PRIME.0) {
-			let underflow;
-			(res, underflow) = sub_4(&t1_on_r, &M::PRIME.0);
-			debug_assert!(t1_extra_bit == underflow,
-				"The number (t1_extra_bit, t1_on_r) is at most 2m-1, so underflowing t1_on_r - m should happen iff t1_extra_bit is set.");
-		} else {
-			copy_from_slice!(res, 0, 4, t1_on_r);
-		}
-		Self(U256(res), PhantomData)
+		Self(u256_mont_reduction_given_prime(mu, &M::PRIME.0, &M::NEGATIVE_PRIME_INV_MOD_R.0), PhantomData)
 	}
 
 	pub(super) const fn from_u256_panicking(v: U256) -> Self {
@@ -1202,6 +1208,43 @@ impl U384 {
 	pub(super) const fn three() -> U384 { U384([0, 0, 0, 0, 0, 3]) }
 }
 
+/// Do mont reduction (but avoid putting it in the templated [`U256Mod`] to avoid having two copies
+/// for different primes
+const fn u384_mont_reduction_given_prime(mu: [u64; 12], prime: &[u64; 6], negative_prime_inv_mod_r: &[u64; 6]) -> U384 {
+	// The definition of REDC (with some names changed):
+	// v = ((mu % R) * N') mod R
+	// t = (mu + v*N) / R
+	// if t >= N { t - N } else { t }
+
+	// mu % R is just the bottom 4 bytes of mu
+	let mu_mod_r = const_subslice(&mu, 6, 12);
+	// v = ((mu % R) * negative_modulus_inverse) % R
+	let mut v = mul_6(&mu_mod_r, negative_prime_inv_mod_r);
+	const ZEROS: &[u64; 6] = &[0; 6];
+	copy_from_slice!(v, 0, 6, ZEROS); // mod R
+
+	// t_on_r = (mu + v*modulus) / R
+	let t0 = mul_6(const_subslice(&v, 6, 12), prime);
+	let (t1, t1_extra_bit) = add_12(&t0, &mu);
+
+	// Note that dividing t1 by R is simply a matter of shifting right by 4 bytes.
+	// We only need to maintain 4 bytes (plus `t1_extra_bit` which is implicitly an extra bit)
+	// because t_on_r is guarantee to be, at max, 2*m - 1.
+	let t1_on_r = const_subslice(&t1, 0, 6);
+
+	let mut res = [0; 6];
+	// The modulus is only 4 bytes, so t1_extra_bit implies we're definitely larger than the
+	// modulus.
+	if t1_extra_bit || slice_greater_than(&t1_on_r, prime) {
+		let underflow;
+		(res, underflow) = sub_6(&t1_on_r, prime);
+		debug_assert!(t1_extra_bit == underflow);
+	} else {
+		copy_from_slice!(res, 0, 6, t1_on_r);
+	}
+	U384(res)
+}
+
 impl<M: PrimeModulus<U384>> U384Mod<M> {
 	const fn mont_reduction(mu: [u64; 12]) -> Self {
 		#[cfg(debug_assertions)] {
@@ -1227,38 +1270,7 @@ impl<M: PrimeModulus<U384>> U384Mod<M> {
 			assert!(slice_equal(const_subslice(&r_squared_mod_prime, 6, 12), &M::R_SQUARED_MOD_PRIME.0));
 		}
 
-		// The definition of REDC (with some names changed):
-		// v = ((mu % R) * N') mod R
-		// t = (mu + v*N) / R
-		// if t >= N { t - N } else { t }
-
-		// mu % R is just the bottom 4 bytes of mu
-		let mu_mod_r = const_subslice(&mu, 6, 12);
-		// v = ((mu % R) * negative_modulus_inverse) % R
-		let mut v = mul_6(&mu_mod_r, &M::NEGATIVE_PRIME_INV_MOD_R.0);
-		const ZEROS: &[u64; 6] = &[0; 6];
-		copy_from_slice!(v, 0, 6, ZEROS); // mod R
-
-		// t_on_r = (mu + v*modulus) / R
-		let t0 = mul_6(const_subslice(&v, 6, 12), &M::PRIME.0);
-		let (t1, t1_extra_bit) = add_12(&t0, &mu);
-
-		// Note that dividing t1 by R is simply a matter of shifting right by 4 bytes.
-		// We only need to maintain 4 bytes (plus `t1_extra_bit` which is implicitly an extra bit)
-		// because t_on_r is guarantee to be, at max, 2*m - 1.
-		let t1_on_r = const_subslice(&t1, 0, 6);
-
-		let mut res = [0; 6];
-		// The modulus is only 4 bytes, so t1_extra_bit implies we're definitely larger than the
-		// modulus.
-		if t1_extra_bit || slice_greater_than(&t1_on_r, &M::PRIME.0) {
-			let underflow;
-			(res, underflow) = sub_6(&t1_on_r, &M::PRIME.0);
-			debug_assert!(t1_extra_bit == underflow);
-		} else {
-			copy_from_slice!(res, 0, 6, t1_on_r);
-		}
-		Self(U384(res), PhantomData)
+		Self(u384_mont_reduction_given_prime(mu, &M::PRIME.0, &M::NEGATIVE_PRIME_INV_MOD_R.0), PhantomData)
 	}
 
 	pub(super) const fn from_u384_panicking(v: U384) -> Self {
