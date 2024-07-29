@@ -204,9 +204,7 @@ macro_rules! define_sub { ($name: ident, $name_abs: ident, $len: expr) => {
 	/// Subtracts the `b` $len-64-bit integer from the `a` $len-64-bit integer, returning a new
 	/// $len-64-bit integer and an overflow bit, with the same semantics as the std
 	/// [`u64::overflowing_sub`] method.
-	const fn $name(a: &[u64], b: &[u64]) -> ([u64; $len], bool) {
-		debug_assert!(a.len() == $len);
-		debug_assert!(b.len() == $len);
+	const fn $name(a: &[u64; $len], b: &[u64; $len]) -> ([u64; $len], bool) {
 		let mut r = [0; $len];
 		let mut carry = false;
 		let mut i = $len - 1;
@@ -226,7 +224,7 @@ macro_rules! define_sub { ($name: ident, $name_abs: ident, $len: expr) => {
 	/// Subtracts the `b` $len-64-bit integer from the `a` $len-64-bit integer, returning a new
 	/// $len-64-bit integer representing the absolute value of the result, as well as a sign bit.
 	#[allow(unused)]
-	const fn $name_abs(a: &[u64], b: &[u64]) -> ([u64; $len], bool) {
+	const fn $name_abs(a: &[u64; $len], b: &[u64; $len]) -> ([u64; $len], bool) {
 		let (mut res, neg) = $name(a, b);
 		if neg {
 			negate!(res);
@@ -608,7 +606,7 @@ macro_rules! define_mod_inv { ($name: ident, $len: expr, $div: ident, $add: iden
 					debug_assert!(!overflow);
 					(new_s, true)
 				},
-				(false, false) => $sub_abs(&old_s, const_subslice(&new_sa, $len, new_sa.len())),
+				(false, false) => $sub_abs(&old_s, const_subarr(&new_sa, $len)),
 			};
 
 			old_r = r;
@@ -756,7 +754,7 @@ impl U4096 {
 		type mul_ty = fn(&[u64], &[u64]) -> [u64; WORD_COUNT_4096 * 2];
 		type sqr_ty = fn(&[u64]) -> [u64; WORD_COUNT_4096 * 2];
 		type add_double_ty = fn(&[u64; WORD_COUNT_4096 * 2], &[u64; WORD_COUNT_4096 * 2]) -> ([u64; WORD_COUNT_4096 * 2], bool);
-		type sub_ty = fn(&[u64], &[u64]) -> ([u64; WORD_COUNT_4096], bool);
+		type sub_ty = fn(&[u64; WORD_COUNT_4096], &[u64; WORD_COUNT_4096]) -> ([u64; WORD_COUNT_4096], bool);
 		let (word_count, log_bits, mul, sqr, add_double, sub) =
 			if m.0[..WORD_COUNT_4096 / 2] == [0; WORD_COUNT_4096 / 2] {
 				if m.0[..WORD_COUNT_4096 * 3 / 4] == [0; WORD_COUNT_4096 * 3 / 4] {
@@ -788,12 +786,12 @@ impl U4096 {
 						res[WORD_COUNT_4096 * 3 / 2..].copy_from_slice(&add);
 						(res, overflow)
 					}
-					fn sub_16_subarr(a: &[u64], b: &[u64]) -> ([u64; WORD_COUNT_4096], bool) {
-						debug_assert_eq!(a.len(), WORD_COUNT_4096);
-						debug_assert_eq!(b.len(), WORD_COUNT_4096);
+					fn sub_16_subarr(a: &[u64; WORD_COUNT_4096], b: &[u64; WORD_COUNT_4096]) -> ([u64; WORD_COUNT_4096], bool) {
 						debug_assert_eq!(&a[..WORD_COUNT_4096 * 3 / 4], &[0; WORD_COUNT_4096 * 3 / 4]);
 						debug_assert_eq!(&b[..WORD_COUNT_4096 * 3 / 4], &[0; WORD_COUNT_4096 * 3 / 4]);
-						let (sub, underflow) = sub_16(&a[WORD_COUNT_4096 * 3 / 4..], &b[WORD_COUNT_4096 * 3 / 4..]);
+						let a_arr = const_subarr(a, WORD_COUNT_4096 * 3 / 4);
+						let b_arr = const_subarr(b, WORD_COUNT_4096 * 3 / 4);
+						let (sub, underflow) = sub_16(a_arr, b_arr);
 						let mut res = [0; WORD_COUNT_4096];
 						res[WORD_COUNT_4096 * 3 / 4..].copy_from_slice(&sub);
 						(res, underflow)
@@ -828,12 +826,12 @@ impl U4096 {
 						res[WORD_COUNT_4096..].copy_from_slice(&add);
 						(res, overflow)
 					}
-					fn sub_32_subarr(a: &[u64], b: &[u64]) -> ([u64; WORD_COUNT_4096], bool) {
-						debug_assert_eq!(a.len(), WORD_COUNT_4096);
-						debug_assert_eq!(b.len(), WORD_COUNT_4096);
+					fn sub_32_subarr(a: &[u64; WORD_COUNT_4096], b: &[u64; WORD_COUNT_4096]) -> ([u64; WORD_COUNT_4096], bool) {
 						debug_assert_eq!(&a[..WORD_COUNT_4096 / 2], &[0; WORD_COUNT_4096 / 2]);
 						debug_assert_eq!(&b[..WORD_COUNT_4096 / 2], &[0; WORD_COUNT_4096 / 2]);
-						let (sub, underflow) = sub_32(&a[WORD_COUNT_4096 / 2..], &b[WORD_COUNT_4096 / 2..]);
+						let a_arr = const_subarr(a, WORD_COUNT_4096 / 2);
+						let b_arr = const_subarr(b, WORD_COUNT_4096 / 2);
+						let (sub, underflow) = sub_32(a_arr, b_arr);
 						let mut res = [0; WORD_COUNT_4096];
 						res[WORD_COUNT_4096 / 2..].copy_from_slice(&sub);
 						(res, underflow)
@@ -855,7 +853,8 @@ impl U4096 {
 		for _ in 0..log_bits {
 			let mut m_m_inv = mul(&m_inv_pos, &m.0);
 			m_m_inv[..WORD_COUNT_4096 * 2 - word_count].fill(0);
-			let m_inv = mul(&sub(&two, &m_m_inv[WORD_COUNT_4096..]).0, &m_inv_pos);
+			let m_m_inv_low_bytes = const_subarr(&m_m_inv, WORD_COUNT_4096);
+			let m_inv = mul(&sub(&two, m_m_inv_low_bytes).0, &m_inv_pos);
 			m_inv_pos[WORD_COUNT_4096 - word_count..].copy_from_slice(&m_inv[WORD_COUNT_4096 * 2 - word_count..]);
 		}
 		m_inv_pos[..WORD_COUNT_4096 - word_count].fill(0);
@@ -1044,14 +1043,14 @@ const fn u256_mont_reduction_given_prime(mu: [u64; 8], prime: &[u64; 4], negativ
 	// Note that dividing t1 by R is simply a matter of shifting right by 4 bytes.
 	// We only need to maintain 4 bytes (plus `t1_extra_bit` which is implicitly an extra bit)
 	// because t_on_r is guarantee to be, at max, 2*m - 1.
-	let t1_on_r = const_subslice(&t1, 0, 4);
+	let t1_on_r: &[u64; 4] = const_subarr(&t1, 0);
 
 	let mut res = [0; 4];
 	// The modulus is only 4 bytes, so t1_extra_bit implies we're definitely larger than the
 	// modulus.
-	if t1_extra_bit || slice_greater_than(&t1_on_r, prime) {
+	if t1_extra_bit || slice_greater_than(t1_on_r, prime) {
 		let underflow;
-		(res, underflow) = sub_4(&t1_on_r, prime);
+		(res, underflow) = sub_4(t1_on_r, prime);
 		debug_assert!(t1_extra_bit == underflow,
 			"The number (t1_extra_bit, t1_on_r) is at most 2m-1, so underflowing t1_on_r - m should happen iff t1_extra_bit is set.");
 	} else {
@@ -1255,14 +1254,14 @@ const fn u384_mont_reduction_given_prime(mu: [u64; 12], prime: &[u64; 6], negati
 	// Note that dividing t1 by R is simply a matter of shifting right by 4 bytes.
 	// We only need to maintain 4 bytes (plus `t1_extra_bit` which is implicitly an extra bit)
 	// because t_on_r is guarantee to be, at max, 2*m - 1.
-	let t1_on_r = const_subslice(&t1, 0, 6);
+	let t1_on_r: &[u64; 6] = const_subarr(&t1, 0);
 
 	let mut res = [0; 6];
 	// The modulus is only 4 bytes, so t1_extra_bit implies we're definitely larger than the
 	// modulus.
-	if t1_extra_bit || slice_greater_than(&t1_on_r, prime) {
+	if t1_extra_bit || slice_greater_than(t1_on_r, prime) {
 		let underflow;
-		(res, underflow) = sub_6(&t1_on_r, prime);
+		(res, underflow) = sub_6(t1_on_r, prime);
 		debug_assert!(t1_extra_bit == underflow);
 	} else {
 		copy_from_slice!(res, 0, 6, t1_on_r);
