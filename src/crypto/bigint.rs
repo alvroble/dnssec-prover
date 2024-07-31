@@ -1015,7 +1015,6 @@ impl U256 {
 
 	pub(super) const fn zero() -> U256 { U256([0, 0, 0, 0]) }
 	pub(super) const fn one() -> U256 { U256([0, 0, 0, 1]) }
-	pub(super) const fn three() -> U256 { U256([0, 0, 0, 3]) }
 }
 
 /// Do mont reduction (but avoid putting it in the templated [`U256Mod`] to avoid having two copies
@@ -1122,22 +1121,27 @@ impl<M: PrimeModulus<U256>> U256Mod<M> {
 		Self::mont_reduction(mul_4(&self.0.0, &b.0.0))
 	}
 
-	/// Doubles `self` mod `m`.
-	pub(super) fn double(&self) -> Self {
-		let mut res = self.0.0;
-		let overflow = double!(res);
-		if overflow || !slice_greater_than(&M::PRIME.0, &res) {
+	fn maybe_reduce_by_prime(mut res: [u64; 4], extra_high_bit: bool) -> Self {
+		if extra_high_bit || !slice_greater_than(&M::PRIME.0, &res) {
 			let underflow;
 			(res, underflow) = sub(&res, &M::PRIME.0);
-			debug_assert_eq!(overflow, underflow);
+			debug_assert_eq!(extra_high_bit, underflow);
 		}
 		Self(U256(res), PhantomData)
 	}
 
+	/// Doubles `self` mod `m`.
+	pub(super) fn double(&self) -> Self {
+		let mut res = self.0.0;
+		let overflow = double!(res);
+		Self::maybe_reduce_by_prime(res, overflow)
+	}
+
 	/// Multiplies `self` by 3 mod `m`.
 	pub(super) fn times_three(&self) -> Self {
-		// TODO: Optimize this a lot
-		self.mul(&U256Mod::from_u256(U256::three()))
+		let mid = self.double();
+		let (res, overflow) = add(&mid.0.0, &self.0.0);
+		Self::maybe_reduce_by_prime(res, overflow)
 	}
 
 	/// Multiplies `self` by 4 mod `m`.
@@ -1226,7 +1230,6 @@ impl U384 {
 
 	pub(super) const fn zero() -> U384 { U384([0, 0, 0, 0, 0, 0]) }
 	pub(super) const fn one() -> U384 { U384([0, 0, 0, 0, 0, 1]) }
-	pub(super) const fn three() -> U384 { U384([0, 0, 0, 0, 0, 3]) }
 }
 
 /// Do mont reduction (but avoid putting it in the templated [`U256Mod`] to avoid having two copies
@@ -1338,22 +1341,27 @@ impl<M: PrimeModulus<U384>> U384Mod<M> {
 		Self::mont_reduction(mul_6(&self.0.0, &b.0.0))
 	}
 
-	/// Doubles `self` mod `m`.
-	pub(super) fn double(&self) -> Self {
-		let mut res = self.0.0;
-		let overflow = double!(res);
-		if overflow || !slice_greater_than(&M::PRIME.0, &res) {
+	fn maybe_reduce_by_prime(mut res: [u64; 6], extra_high_bit: bool) -> Self {
+		if extra_high_bit || !slice_greater_than(&M::PRIME.0, &res) {
 			let underflow;
 			(res, underflow) = sub(&res, &M::PRIME.0);
-			debug_assert_eq!(overflow, underflow);
+			debug_assert_eq!(extra_high_bit, underflow);
 		}
 		Self(U384(res), PhantomData)
 	}
 
+	/// Doubles `self` mod `m`.
+	pub(super) fn double(&self) -> Self {
+		let mut res = self.0.0;
+		let overflow = double!(res);
+		Self::maybe_reduce_by_prime(res, overflow)
+	}
+
 	/// Multiplies `self` by 3 mod `m`.
 	pub(super) fn times_three(&self) -> Self {
-		// TODO: Optimize this a lot
-		self.mul(&U384Mod::from_u384(U384::three()))
+		let mid = self.double();
+		let (res, overflow) = add(&mid.0.0, &self.0.0);
+		Self::maybe_reduce_by_prime(res, overflow)
 	}
 
 	/// Multiplies `self` by 4 mod `m`.
