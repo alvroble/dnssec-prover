@@ -323,12 +323,52 @@ const fn mul_3(a: &[u64; 3], b: &[u64; 3]) -> [u64; 6] {
 	[r0, r1, r2, r3, r4, r5]
 }
 
+macro_rules! define_gradeschool_mul { ($name: ident, $len: expr, $submul: ident) => {
+	/// Multiplies two $len-64-bit integers together, returning a new $len*2-64-bit integer.
+	const fn $name(a: &[u64; $len], b: &[u64; $len]) -> [u64; $len * 2] {
+		let a0: &[u64; $len / 2] = const_subarr(a, 0);
+		let a1: &[u64; $len / 2] = const_subarr(a, $len / 2);
+		let b0: &[u64; $len / 2] = const_subarr(b, 0);
+		let b1: &[u64; $len / 2] = const_subarr(b, $len / 2);
+
+		let z2 = $submul(&a0, &b0);
+		let z1i = $submul(&a0, &b1);
+		let z1j = $submul(&b0, &a1);
+		let z0 = $submul(&a1, &b1);
+
+		let (z1, i_carry_a) = add(&z1i, &z1j);
+
+		let z2a: &[u64; $len / 2] = const_subarr(&z2, 0);
+		let z1a: &[u64; $len / 2] = const_subarr(&z1, 0);
+		let z0a: &[u64; $len / 2] = const_subarr(&z0, 0);
+		let z2b: &[u64; $len / 2] = const_subarr(&z2, $len / 2);
+		let z1b: &[u64; $len / 2] = const_subarr(&z1, $len / 2);
+		let z0b: &[u64; $len / 2] = const_subarr(&z0, $len / 2);
+
+		let l = z0b;
+
+		let (k, j_carry) = add(&z0a, &z1b);
+
+		let (mut j, i_carry_b) = add(&z1a, &z2b);
+		let i_carry_c = add_u64!(j, j_carry as u64);
+
+		let mut i = *z2a;
+		let i_carry = i_carry_a as u64 + i_carry_b as u64 + i_carry_c as u64;
+		let must_not_overflow = add_u64!(i, i_carry);
+		debug_assert!(!must_not_overflow, "Two N*64 bit numbers, multiplied, will not use more than 2*N*64 bits");
+
+		let mut res = [0; $len * 2];
+		copy_from_slice!(res, 0, $len / 2, i);
+		copy_from_slice!(res, $len / 2, $len, j);
+		copy_from_slice!(res, $len, $len * 3 / 2, k);
+		copy_from_slice!(res, $len * 3 / 2, $len * 2, l);
+		res
+	}
+} }
+
 macro_rules! define_mul { ($name: ident, $len: expr, $submul: ident) => {
 	/// Multiplies two $len-64-bit integers together, returning a new $len*2-64-bit integer.
 	const fn $name(a: &[u64; $len], b: &[u64; $len]) -> [u64; $len * 2] {
-		// We could probably get a bit faster doing gradeschool multiplication for some smaller
-		// sizes, but its easier to just have one variable-length multiplication, so we do
-		// Karatsuba always here.
 		let a0: &[u64; $len / 2] = const_subarr(a, 0);
 		let a1: &[u64; $len / 2] = const_subarr(a, $len / 2);
 		let b0: &[u64; $len / 2] = const_subarr(b, 0);
@@ -391,8 +431,8 @@ macro_rules! define_mul { ($name: ident, $len: expr, $submul: ident) => {
 	}
 } }
 
-define_mul!(mul_4, 4, mul_2);
-define_mul!(mul_6, 6, mul_3);
+define_gradeschool_mul!(mul_4, 4, mul_2);
+define_gradeschool_mul!(mul_6, 6, mul_3);
 define_mul!(mul_8, 8, mul_4);
 define_mul!(mul_16, 16, mul_8);
 define_mul!(mul_32, 32, mul_16);
