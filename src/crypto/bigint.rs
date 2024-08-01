@@ -431,7 +431,13 @@ macro_rules! define_mul { ($name: ident, $len: expr, $submul: ident) => {
 define_gradeschool_mul!(mul_4, 4, mul_2);
 #[cfg(not(feature = "slower_smaller_binary"))]
 define_gradeschool_mul!(mul_6, 6, mul_3);
+
+#[cfg(not(feature = "slower_smaller_binary"))]
 define_mul!(mul_8, 8, mul_4);
+
+#[cfg(feature = "slower_smaller_binary")]
+define_gradeschool_mul!(mul_8, 8, mul_4);
+
 define_mul!(mul_16, 16, mul_8);
 define_mul!(mul_32, 32, mul_16);
 define_mul!(mul_64, 64, mul_32);
