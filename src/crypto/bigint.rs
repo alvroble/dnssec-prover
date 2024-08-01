@@ -439,6 +439,7 @@ define_mul!(mul_64, 64, mul_32);
 ///
 /// This is the base case for our squaring, taking advantage of Rust's native 128-bit int
 /// types to do multiplication (potentially) natively.
+#[cfg(not(feature = "slower_smaller_binary"))]
 const fn sqr_2(a: &[u64; 2]) -> [u64; 4] {
 	let (a0, a1) = (a[0] as u128, a[1] as u128);
 	let z2 = a0 * a0;
@@ -450,7 +451,14 @@ const fn sqr_2(a: &[u64; 2]) -> [u64; 4] {
 	add_mul_2_parts(z2, z1, z0, i_carry_a)
 }
 
-macro_rules! define_sqr { ($name: ident, $len: expr, $submul: ident, $subsqr: ident) => {
+macro_rules! define_sqr { ($name: ident, $len: expr, $mul: ident, $submul: ident, $subsqr: ident) => {
+	#[cfg(feature = "slower_smaller_binary")]
+	/// Squares a $len-64-bit integers, returning a new $len*2-64-bit integer.
+	const fn $name(a: &[u64; $len]) -> [u64; $len * 2] {
+		$mul(a, a)
+	}
+
+	#[cfg(not(feature = "slower_smaller_binary"))]
 	/// Squares a $len-64-bit integers, returning a new $len*2-64-bit integer.
 	const fn $name(a: &[u64; $len]) -> [u64; $len * 2] {
 		// Squaring is only 3 half-length multiplies/squares in gradeschool math, so use that.
@@ -495,14 +503,16 @@ macro_rules! define_sqr { ($name: ident, $len: expr, $submul: ident, $subsqr: id
 } }
 
 // TODO: Write an optimized sqr_3 (though secp384r1 is barely used)
+#[cfg(not(feature = "slower_smaller_binary"))]
 const fn sqr_3(a: &[u64; 3]) -> [u64; 6] { mul_3(a, a) }
 
-define_sqr!(sqr_4, 4, mul_2, sqr_2);
-define_sqr!(sqr_6, 6, mul_3, sqr_3);
-define_sqr!(sqr_8, 8, mul_4, sqr_4);
-define_sqr!(sqr_16, 16, mul_8, sqr_8);
-define_sqr!(sqr_32, 32, mul_16, sqr_16);
-define_sqr!(sqr_64, 64, mul_32, sqr_32);
+define_sqr!(sqr_4, 4, mul_4, mul_2, sqr_2);
+define_sqr!(sqr_6, 6, mul_6, mul_3, sqr_3);
+#[cfg(not(feature = "slower_smaller_binary"))]
+define_sqr!(sqr_8, 8, mul_8, mul_4, sqr_4);
+define_sqr!(sqr_16, 16, mul_16, mul_8, sqr_8);
+define_sqr!(sqr_32, 32, mul_32, mul_16, sqr_16);
+define_sqr!(sqr_64, 64, mul_64, mul_32, sqr_32);
 
 macro_rules! dummy_pre_push { ($name: ident, $len: expr) => {} }
 macro_rules! vec_pre_push { ($name: ident, $len: expr) => { $name.push([0; $len]); } }
