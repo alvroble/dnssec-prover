@@ -24,6 +24,10 @@
 //!  * Finally, the crate can be built as a binary using the `build_server` feature, responding to
 //!    queries over HTTP GET calls to `/dnssecproof?d=domain.name.&t=RecordType` with DNSSEC
 //!    proofs.
+//!
+//! The `slower_smaller_binary` feature slows proof validation down by 50%+ for a very marginal
+//! reduction in binary size, but those who are extremely binary size constrained may still find it
+//! useful.
 
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]

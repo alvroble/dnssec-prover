@@ -21,6 +21,10 @@ There are numerous APIs present:
    `/dnssecproof?d=domain&t=rr_type`, returning the binary proof containing and
    proving the Resource Record of type `rr_type` at `domain`.
 
+The `slower_smaller_binary` feature slows proof validation down by 50%+ for a
+very marginal reduction in binary size, but those who are extremely binary size
+constrained may still find it useful.
+
 See https://docs.rs/dnssec-prover for full API details on the Rust API.
 There's also a website which demonstrates the WASM build of this crate at
 https://http-dns-prover.as397444.net/ which allows for making validated queries.

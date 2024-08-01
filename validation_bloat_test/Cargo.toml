@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-dnssec-prover = { path = "../", default-features = false, features = ["validation"] }
+dnssec-prover = { path = "../", default-features = false, features = ["validation", "slower_smaller_binary"] }

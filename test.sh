@@ -7,6 +7,7 @@ cargo $RUST_VERSION test --no-default-features --features std
 cargo $RUST_VERSION test --no-default-features --features tokio
 cargo $RUST_VERSION test --no-default-features --features validation
 cargo $RUST_VERSION test --features std,tokio,validation
+cargo $RUST_VERSION test --features std,tokio,validation,slower_smaller_binary
 cargo $RUST_VERSION test --no-default-features --features build_server
 cargo $RUST_VERSION build --lib
 cargo $RUST_VERSION build --lib --features std
