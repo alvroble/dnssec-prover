@@ -256,6 +256,7 @@ const fn add_mul_2_parts(z2: u128, z1: u128, z0: u128, i_carry_a: bool) -> [u64;
 	[i, j, k, l]
 }
 
+#[cfg(not(feature = "slower_smaller_binary"))]
 const fn mul_3(a: &[u64; 3], b: &[u64; 3]) -> [u64; 6] {
 	let (a0, a1, a2) = (a[0] as u128, a[1] as u128, a[2] as u128);
 	let (b0, b1, b2) = (b[0] as u128, b[1] as u128, b[2] as u128);
@@ -428,12 +429,26 @@ macro_rules! define_mul { ($name: ident, $len: expr, $submul: ident) => {
 } }
 
 define_gradeschool_mul!(mul_4, 4, mul_2);
+#[cfg(not(feature = "slower_smaller_binary"))]
 define_gradeschool_mul!(mul_6, 6, mul_3);
 define_mul!(mul_8, 8, mul_4);
 define_mul!(mul_16, 16, mul_8);
 define_mul!(mul_32, 32, mul_16);
 define_mul!(mul_64, 64, mul_32);
 
+#[cfg(feature = "slower_smaller_binary")]
+const fn mul_6(a: &[u64; 6], b: &[u64; 6]) -> [u64; 12] {
+	let mut ae = [0; 8];
+	let mut be = [0; 8];
+	copy_from_slice!(ae, 2, 8, a);
+	copy_from_slice!(be, 2, 8, b);
+	let bonus_res = mul_8(&ae, &be);
+	let mut res = [0; 12];
+	let mut i = 0;
+	while i < 4 { debug_assert!(bonus_res[i] == 0); i += 1; }
+	while i < 16 { res[i - 4] = bonus_res[i]; i += 1; }
+	res
+}
 
 /// Squares a 128-bit integer, returning a new 256-bit integer.
 ///
