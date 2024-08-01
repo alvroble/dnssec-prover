@@ -409,18 +409,14 @@ macro_rules! define_mul { ($name: ident, $len: expr, $submul: ident) => {
 		let l = const_subslice(&z0, $len / 2, $len);
 		let (k, j_carry) = add(z0_start, z1_end);
 		let (mut j, i_carry_a) = add(z1_start, z2_end);
-		let mut i_carry_b = false;
-		if j_carry {
-			i_carry_b = add_u64!(j, 1);
-		}
+		let i_carry_b = add_u64!(j, j_carry as u64);
+
 		let mut i = [0; $len / 2];
 		let i_source = const_subslice(&z2, 0, $len / 2);
 		copy_from_slice!(i, 0, $len / 2, i_source);
 		let i_carry = i_carry_a as u64 + i_carry_b as u64 + z1_carry as u64;
-		if i_carry != 0 {
-			let must_not_overflow = add_u64!(i, i_carry);
-			debug_assert!(!must_not_overflow, "Two N*64 bit numbers, multiplied, will not use more than 2*N*64 bits");
-		}
+		let must_not_overflow = add_u64!(i, i_carry);
+		debug_assert!(!must_not_overflow, "Two N*64 bit numbers, multiplied, will not use more than 2*N*64 bits");
 
 		let mut res = [0; $len * 2];
 		copy_from_slice!(res, $len * 2 * 0 / 4, $len * 2 * 1 / 4, i);
