@@ -90,6 +90,11 @@ where Keys: IntoIterator<Item = &'a DnsKey> {
 
 			records.sort_unstable();
 
+			// Some recursive resolvers (at least 9.9.9.9) give us a few too many records, and the
+			// proof builder is too naive to filter them out. Instead, we filter them out here, as
+			// there's no security harm to just removing identical records here.
+			records.dedup();
+
 			for record in records.iter() {
 				let record_labels = record.name().labels() as usize;
 				let labels = sig.labels.into();
