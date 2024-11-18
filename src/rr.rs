@@ -789,7 +789,7 @@ impl StaticRecord for RRSig {
 	}
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// A mask used in [`NSec`] and [`NSec3`] records which indicates the resource record types which
 /// exist at the (hash of the) name described in [`Record::name`].
 pub struct NSecTypeMask([u8; 8192]);
@@ -817,24 +817,27 @@ impl NSecTypeMask {
 	}
 	fn write_json(&self, s: &mut String) {
 		*s += "[";
+		write!(s, "{:?}", self).expect("Writes to a string shouldn't fail");
+		*s += "]";
+	}
+}
+impl fmt::Debug for NSecTypeMask {
+	fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
 		let mut have_written = false;
 		for (idx, mask) in self.0.iter().enumerate() {
 			if *mask == 0 { continue; }
 			for b in 0..8 {
 				if *mask & (1 << b) != 0 {
-					if have_written {
-						*s += ",";
-					}
-					have_written = true;
 					let ty = ((idx as u16) << 3) | (7 - b);
 					match RR::ty_to_rr_name(ty) {
-						Some(name) => write!(s, "\"{}\"", name).expect("Writes to a string shouldn't fail"),
-						_ => write!(s, "{}", ty).expect("Writes to a string shouldn't fail"),
+						Some(name) => write!(f, "{}\"{}\"", if have_written { "," } else { "" }, name)?,
+						_ => write!(f, "{}{}", if have_written { "," } else { "" }, ty)?,
 					}
+					have_written = true;
 				}
 			}
 		}
-		*s += "]";
+		Ok(())
 	}
 }
 
