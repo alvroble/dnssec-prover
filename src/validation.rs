@@ -16,12 +16,19 @@ use crate::MAX_PROOF_STEPS;
 /// These are available at <https://data.iana.org/root-anchors/root-anchors.xml>
 pub fn root_hints() -> Vec<DS> {
 	#[allow(unused_mut)]
-	let mut res = vec![DS {
+	let mut res = vec![
+	// The 2010 key was only valid until 2019, predating this software substantially. We don't
+	// bother to implement checking that it is only used on old proofs so simply do not use it.
+	/*DS {
 		name: ".".try_into().unwrap(), key_tag: 19036, alg: 8, digest_type: 2,
 		digest: hex_lit::hex!("49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5").to_vec(),
-	}, DS {
+	},*/
+	DS {
 		name: ".".try_into().unwrap(), key_tag: 20326, alg: 8, digest_type: 2,
 		digest: hex_lit::hex!("E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D").to_vec(),
+	}, DS {
+		name: ".".try_into().unwrap(), key_tag: 38696, alg: 8, digest_type: 2,
+		digest: hex_lit::hex!("683D2D0ACB8C9B712A1948B27F741219298D0A450D612C483AF444A4C0FB2B16").to_vec(),
 	}];
 	// In tests, add the trust anchor from RFC 9102
 	#[cfg(test)]
