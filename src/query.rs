@@ -180,7 +180,7 @@ impl std::error::Error for ProofBuildingError {
 
 }
 
-#[cfg(fuzzing)]
+#[cfg(dnssec_prover_fuzzing)]
 /// Read some input and parse it as if it came from a server, for fuzzing.
 pub fn fuzz_response(response: &[u8]) {
 	let (mut proof, mut names) = (Vec::new(), Vec::new());
@@ -261,7 +261,7 @@ fn handle_response(resp: &[u8], proof: &mut Vec<u8>, rrsig_key_names: &mut Vec<N
 	Ok(min_ttl)
 }
 
-#[cfg(fuzzing)]
+#[cfg(dnssec_prover_fuzzing)]
 /// Read a stream of responses and handle them it as if they came from a server, for fuzzing.
 pub fn fuzz_proof_builder(mut response_stream: &[u8]) {
 	let (mut builder, _) = ProofBuilder::new(&"example.com.".try_into().unwrap(), Txt::TYPE);

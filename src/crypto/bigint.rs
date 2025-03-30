@@ -585,7 +585,7 @@ macro_rules! define_div_rem { ($name: ident, $len: expr, $heap_init: expr, $pre_
 	}
 } }
 
-#[cfg(fuzzing)]
+#[cfg(dnssec_prover_fuzzing)]
 define_div_rem!(div_rem_2, 2, [[0; 2]; 2 * 64], dummy_pre_push, const);
 define_div_rem!(div_rem_4, 4, [[0; 4]; 4 * 64], dummy_pre_push, const); // Uses 8 KiB of stack
 define_div_rem!(div_rem_6, 6, [[0; 6]; 6 * 64], dummy_pre_push, const); // Uses 18 KiB of stack!
@@ -659,11 +659,11 @@ macro_rules! define_mod_inv { ($name: ident, $len: expr, $div: ident, $mul: iden
 		}
 	}
 } }
-#[cfg(fuzzing)]
+#[cfg(dnssec_prover_fuzzing)]
 define_mod_inv!(mod_inv_2, 2, div_rem_2, mul_2);
 define_mod_inv!(mod_inv_4, 4, div_rem_4, mul_4);
 define_mod_inv!(mod_inv_6, 6, div_rem_6, mul_6);
-#[cfg(fuzzing)]
+#[cfg(dnssec_prover_fuzzing)]
 define_mod_inv!(mod_inv_8, 8, div_rem_8, mul_8);
 
 // ******************
@@ -1438,7 +1438,7 @@ impl<M: PrimeModulus<U384>> U384Mod<M> {
 	}
 }
 
-#[cfg(fuzzing)]
+#[cfg(dnssec_prover_fuzzing)]
 mod fuzz_moduli {
 	use super::*;
 
@@ -1463,9 +1463,9 @@ mod fuzz_moduli {
 	}
 }
 
-#[cfg(fuzzing)]
+#[cfg(dnssec_prover_fuzzing)]
 extern crate ibig;
-#[cfg(fuzzing)]
+#[cfg(dnssec_prover_fuzzing)]
 /// Read some bytes and use them to test bigint math by comparing results against the `ibig` crate.
 pub fn fuzz_math(input: &[u8]) {
 	if input.len() < 32 || input.len() % 16 != 0 { return; }

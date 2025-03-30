@@ -53,9 +53,9 @@ pub const MAX_PROOF_STEPS: usize = 20;
 #[cfg(feature = "validation")]
 mod base32;
 
-#[cfg(all(feature = "validation", any(fuzzing, dnssec_validate_bench)))]
+#[cfg(all(feature = "validation", any(dnssec_prover_fuzzing, dnssec_validate_bench)))]
 pub mod crypto;
-#[cfg(all(feature = "validation", not(any(fuzzing, dnssec_validate_bench))))]
+#[cfg(all(feature = "validation", not(any(dnssec_prover_fuzzing, dnssec_validate_bench))))]
 mod crypto;
 
 pub mod rr;

@@ -12,6 +12,9 @@
 #[cfg(not(fuzzing))]
 compile_error!("Fuzz targets need cfg=fuzzing");
 
+#[cfg(not(dnssec_prover_fuzzing))]
+compile_error!("Fuzz targets need cfg=dnssec_prover_fuzzing");
+
 extern crate dnssec_prover;
 use dnssec_prover::ser::parse_rr_stream;
 use dnssec_prover::validation::verify_rr_stream;

@@ -18,7 +18,7 @@ cargo $RUST_VERSION build --lib --features std,tokio,validation --release
 cargo $RUST_VERSION build --bin http_proof_gen --features build_server
 cargo $RUST_VERSION doc --features std,tokio,validation
 cd fuzz
-RUSTFLAGS="--cfg=fuzzing" RUSTC_BOOTSTRAP=1 cargo build --features stdin_fuzz
-RUSTFLAGS="--cfg=fuzzing" RUSTC_BOOTSTRAP=1 cargo test
+RUSTFLAGS="--cfg=fuzzing --cfg=dnssec_prover_fuzzing" RUSTC_BOOTSTRAP=1 cargo build --features stdin_fuzz
+RUSTFLAGS="--cfg=fuzzing --cfg=dnssec_prover_fuzzing" RUSTC_BOOTSTRAP=1 cargo test
 cd ../bench
 RUSTFLAGS="--cfg=dnssec_validate_bench" cargo bench
