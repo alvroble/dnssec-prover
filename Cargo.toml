@@ -57,5 +57,7 @@ level = "forbid"
 check-cfg = [
 	"cfg(fuzzing)",
 	"cfg(dnssec_prover_fuzzing)",
-	"cfg(dnssec_validate_bench)"
+	"cfg(dnssec_validate_bench)",
+	"cfg(dnssec_prover_c_hashers)",
+	"cfg(dnssec_prover_c_hashers_test)"
 ]

@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eox
 
+RUSTFLAGS="--cfg=dnssec_prover_c_hashers_test --cfg=dnssec_prover_c_hashers" cargo test --features std,tokio,validation
+
 cargo $RUST_VERSION test --no-default-features
 cargo $RUST_VERSION test
 cargo $RUST_VERSION test --no-default-features --features std
