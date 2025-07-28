@@ -47,3 +47,15 @@ path = "src/lib.rs"
 [[bin]]
 name = "http_proof_gen"
 path = "src/http.rs"
+
+[lints.rust.unexpected_cfgs]
+level = "forbid"
+# When adding a new cfg attribute, ensure that it is added to this list.
+#
+# Note that Cargo automatically declares corresponding cfgs for every feature
+# defined in the member-level [features] tables as "expected".
+check-cfg = [
+	"cfg(fuzzing)",
+	"cfg(dnssec_prover_fuzzing)",
+	"cfg(dnssec_validate_bench)"
+]
