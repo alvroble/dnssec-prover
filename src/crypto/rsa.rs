@@ -1,5 +1,6 @@
 //! A simple RSA implementation which handles DNSSEC RSA validation
 
+use crate::unhex::unhex;
 use super::bigint::*;
 
 fn bytes_to_rsa_mod_exp_modlen(pubkey: &[u8]) -> Result<(U4096, u32, usize), ()> {
@@ -37,8 +38,8 @@ pub fn validate_rsa(pk: &[u8], sig_bytes: &[u8], hash_input: &[u8]) -> Result<()
 	if sig > modulus { return Err(()); }
 
 	// From https://www.rfc-editor.org/rfc/rfc5702#section-3.1
-	const SHA256_PFX: [u8; 20] = hex_lit::hex!("003031300d060960864801650304020105000420");
-	const SHA512_PFX: [u8; 20] = hex_lit::hex!("003051300d060960864801650304020305000440");
+	const SHA256_PFX: [u8; 20] = unhex("003031300d060960864801650304020105000420");
+	const SHA512_PFX: [u8; 20] = unhex("003051300d060960864801650304020305000440");
 	let pfx = if hash_input.len() == 512 / 8 { &SHA512_PFX } else { &SHA256_PFX };
 
 	if 512 - 2 - SHA256_PFX.len() <= hash_input.len() { return Err(()); }

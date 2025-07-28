@@ -9,6 +9,7 @@ use crate::base32;
 use crate::crypto;
 use crate::rr::*;
 use crate::ser::write_name;
+use crate::unhex::unhex;
 use crate::MAX_PROOF_STEPS;
 
 /// Gets the trusted root anchors
@@ -21,20 +22,20 @@ pub fn root_hints() -> Vec<DS> {
 	// bother to implement checking that it is only used on old proofs so simply do not use it.
 	/*DS {
 		name: ".".try_into().unwrap(), key_tag: 19036, alg: 8, digest_type: 2,
-		digest: hex_lit::hex!("49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5").to_vec(),
+		digest: unhex:<32>("49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5").to_vec(),
 	},*/
 	DS {
 		name: ".".try_into().unwrap(), key_tag: 20326, alg: 8, digest_type: 2,
-		digest: hex_lit::hex!("E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D").to_vec(),
+		digest: unhex::<32>("E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D").to_vec(),
 	}, DS {
 		name: ".".try_into().unwrap(), key_tag: 38696, alg: 8, digest_type: 2,
-		digest: hex_lit::hex!("683D2D0ACB8C9B712A1948B27F741219298D0A450D612C483AF444A4C0FB2B16").to_vec(),
+		digest: unhex::<32>("683D2D0ACB8C9B712A1948B27F741219298D0A450D612C483AF444A4C0FB2B16").to_vec(),
 	}];
 	// In tests, add the trust anchor from RFC 9102
 	#[cfg(test)]
 	res.push(DS {
 		name: ".".try_into().unwrap(), key_tag: 47005, alg: 13, digest_type: 2,
-		digest: hex_lit::hex!("2eb6e9f2480126691594d649a5a613de3052e37861634641bb568746f2ffc4d4").to_vec(),
+		digest: unhex::<32>("2eb6e9f2480126691594d649a5a613de3052e37861634641bb568746f2ffc4d4").to_vec(),
 	});
 	res
 }

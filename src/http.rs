@@ -28,6 +28,8 @@ mod base32;
 mod crypto;
 #[cfg(feature = "validation")]
 pub mod validation;
+#[cfg(feature = "validation")]
+pub(crate) mod unhex;
 
 #[cfg(any(feature = "build_server", all(feature = "tokio", feature = "validation")))]
 use tokio_crate as tokio;

@@ -1440,25 +1440,26 @@ impl<M: PrimeModulus<U384>> U384Mod<M> {
 
 #[cfg(dnssec_prover_fuzzing)]
 mod fuzz_moduli {
+	use crate::unhex::unhex;
 	use super::*;
 
 	pub struct P256();
 	impl PrimeModulus<U256> for P256 {
-		const PRIME: U256 = U256::from_32_be_bytes_panicking(&hex_lit::hex!(
+		const PRIME: U256 = U256::from_32_be_bytes_panicking(&unhex(
 			"ffffffff00000001000000000000000000000000ffffffffffffffffffffffff"));
-		const R_SQUARED_MOD_PRIME: U256 = U256::from_32_be_bytes_panicking(&hex_lit::hex!(
+		const R_SQUARED_MOD_PRIME: U256 = U256::from_32_be_bytes_panicking(&unhex(
 			"00000004fffffffdfffffffffffffffefffffffbffffffff0000000000000003"));
-		const NEGATIVE_PRIME_INV_MOD_R: U256 = U256::from_32_be_bytes_panicking(&hex_lit::hex!(
+		const NEGATIVE_PRIME_INV_MOD_R: U256 = U256::from_32_be_bytes_panicking(&unhex(
 			"ffffffff00000002000000000000000000000001000000000000000000000001"));
 	}
 
 	pub struct P384();
 	impl PrimeModulus<U384> for P384 {
-		const PRIME: U384 = U384::from_48_be_bytes_panicking(&hex_lit::hex!(
+		const PRIME: U384 = U384::from_48_be_bytes_panicking(&unhex(
 			"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000ffffffff"));
-		const R_SQUARED_MOD_PRIME: U384 = U384::from_48_be_bytes_panicking(&hex_lit::hex!(
+		const R_SQUARED_MOD_PRIME: U384 = U384::from_48_be_bytes_panicking(&unhex(
 			"000000000000000000000000000000010000000200000000fffffffe000000000000000200000000fffffffe00000001"));
-		const NEGATIVE_PRIME_INV_MOD_R: U384 = U384::from_48_be_bytes_panicking(&hex_lit::hex!(
+		const NEGATIVE_PRIME_INV_MOD_R: U384 = U384::from_48_be_bytes_panicking(&unhex(
 			"00000014000000140000000c00000002fffffffcfffffffafffffffbfffffffe00000000000000010000000100000001"));
 	}
 }
