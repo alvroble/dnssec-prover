@@ -185,16 +185,76 @@ cargo run --bin uniffi-bindgen generate \
   --language python
 ```
 
-## Install Python Package
+## Required Patch for dnssec_prover.py
 
-```bash
-cd python-bindings
-python setup.py install
+The generated Python bindings need a patch to fix library loading. Apply this patch to `python-bindings/dnssec_prover.py`:
+
+```diff
+--- a/python-bindings/dnssec_prover.py
++++ b/python-bindings/dnssec_prover.py
+@@ -429,27 +429,50 @@
+ def _uniffi_load_indirect():
+     """
+     This is how we find and load the dynamic library provided by the component.
+-    For now we just look it up by name.
++    We use the same pattern as ctypes_secp256k1.py for consistency.
+     """
+-    if sys.platform == "darwin":
+-        libname = "lib{}.dylib"
+-    elif sys.platform.startswith("win"):
+-        # As of python3.8, ctypes does not seem to search $PATH when loading DLLs.
+-        # We could use `os.add_dll_directory` to configure the search path, but
+-        # it doesn't feel right to mess with application-wide settings. Let's
+-        # assume that the `.dll` is next to the `.py` file and load by full path.
+-        libname = os.path.join(
+-            os.path.dirname(__file__),
+-            "{}.dll",
++    library_path = None
++    extension = ""
++    if platform.system() == "Darwin":
++        extension = ".dylib"
++    elif platform.system() == "Linux":
++        extension = ".so"
++    elif platform.system() == "Windows":
++        extension = ".dll"
+
++    # Try prebuilt platform-specific library first
++    path = os.path.join(
++        os.path.dirname(__file__),
++        "prebuilt/libuniffi_dnssec_prover_%s_%s%s"
++        % (platform.system().lower(), platform.machine().lower(), extension),
++    )
++    if os.path.isfile(path):
++        return ctypes.cdll.LoadLibrary(path)
+    
++    # Try searching system paths
++    if not library_path:
++        library_path = ctypes.util.find_library("libuniffi_dnssec_prover")
++    if not library_path:
++        library_path = ctypes.util.find_library("uniffi_dnssec_prover")
+    
++    # Platform-specific fallback locations
++    if not library_path:
++        if platform.system() == "Linux" and os.path.isfile(
++            "/usr/local/lib/libuniffi_dnssec_prover.so"
++        ):
++            library_path = "/usr/local/lib/libuniffi_dnssec_prover.so"
++        elif platform.system() == "Darwin" and os.path.isfile(
++            "/usr/local/lib/libuniffi_dnssec_prover.dylib"
++        ):
++            library_path = "/usr/local/lib/libuniffi_dnssec_prover.dylib"
+    
++    if not library_path:
++        raise RuntimeError(
++            f"Can't find libuniffi_dnssec_prover library for {platform.system().lower()}_{platform.machine().lower()}. "
++            "Make sure to compile and install it, or place it in the prebuilt/ directory."
++        )
+    
++    return ctypes.cdll.LoadLibrary(library_path)
 ```
 
-## Test Installation
-
-```python
-import dnssec_prover
-print("DNSSEC Prover imported successfully!")
-``` 
+This patch:
+1. Fixes the library loading to use proper platform detection
+2. Adds support for finding libraries in a `prebuilt/` subdirectory such as the one `embit` uses
+3. Provides fallback paths for system-installed libraries
+4. Gives better error messages when libraries can't be found
